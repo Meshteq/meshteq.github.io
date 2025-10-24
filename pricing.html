@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Meshteq — LoRaWAN NaaS Packages</title>
+  <meta name="description" content="Managed LoRaWAN connectivity with devices, dashboards, and AI analytics — packaged for pilots, campuses, utilities, and enterprises.">
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-neutral-950 text-neutral-100 antialiased">
+  <!-- Header -->
+  <header class="border-b border-neutral-900">
+    <div class="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+      <a href="/" class="text-lg font-semibold tracking-tight">Meshteq</a>
+      <nav class="text-sm space-x-6">
+        <a href="/" class="hover:text-white/80">Home</a>
+        <a href="/pricing.html" class="text-white">NaaS Packages</a>
+        <a href="/#contact" class="hover:text-white/80">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Page Intro -->
+  <section class="bg-neutral-900 py-16">
+    <div class="max-w-7xl mx-auto px-6">
+      <h1 class="text-3xl md:text-4xl font-semibold tracking-tight">LoRaWAN NaaS Packages</h1>
+      <p class="mt-4 text-neutral-300 max-w-2xl">
+        Managed connectivity, devices, and analytics — delivered as a subscription. Choose a package or ask us to tailor one for your coverage and SLA needs.
+      </p>
+
+      <!-- Pricing visibility note (edit one word only) -->
+      <div class="mt-6 text-xs text-neutral-400">
+        <!-- To show price hints, change "false" to "true" below in the data attribute on the grid -->
+        Tip: Prices vary by country and scope. We recommend keeping “Request Quote” for Utility/Enterprise.
+      </div>
+    </div>
+  </section>
+
+  <!-- Plans Grid -->
+  <main class="py-10">
+    <div class="max-w-7xl mx-auto px-6">
+      <!-- Set data-show-prices="false" (default). Change to "true" if you want “Starting at …” to appear on Pilot/Campus. -->
+      <div id="plans" class="grid md:grid-cols-2 lg:grid-cols-4 gap-6" data-show-prices="false">
+        <!-- Pilot -->
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-950 p-6 flex flex-col">
+          <h2 class="text-xl font-semibold">Pilot</h2>
+          <p class="mt-2 text-sm text-neutral-400">3–6 month scoped trial for validation.</p>
+          <ul class="mt-5 space-y-2 text-sm text-neutral-300">
+            <li>• Up to 1 gateway, 20–50 devices</li>
+            <li>• Managed LNS & secure onboarding</li>
+            <li>• Starter dashboard & alerts</li>
+            <li>• Basic SLA & email support</li>
+            <li>• Final report & scale plan</li>
+          </ul>
+          <p class="mt-6 text-2xl font-semibold hidden price">Starting at RM —</p>
+          <a href="/#contact" class="mt-6 inline-flex items-center justify-center rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-900">Request Quote</a>
+        </div>
+
+        <!-- Campus -->
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-950 p-6 flex flex-col">
+          <h2 class="text-xl font-semibold">Campus</h2>
+          <p class="mt-2 text-sm text-neutral-400">Multi-building coverage & dashboards.</p>
+          <ul class="mt-5 space-y-2 text-sm text-neutral-300">
+            <li>• 2–5 gateways, 100–300 devices</li>
+            <li>• RF planning & device commissioning</li>
+            <li>• Multi-tenant dashboards & roles</li>
+            <li>• API access (ERP/SCADA)</li>
+            <li>• Standard SLA & helpdesk</li>
+          </ul>
+          <p class="mt-6 text-2xl font-semibold hidden price">Starting at RM — / month</p>
+          <a href="/#contact" class="mt-6 inline-flex items-center justify-center rounded-xl bg-white text-black px-4 py-2 hover:opacity-90">Request Quote</a>
+        </div>
+
+        <!-- Utility -->
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-950 p-6 flex flex-col">
+          <h2 class="text-xl font-semibold">Utility</h2>
+          <p class="mt-2 text-sm text-neutral-400">City/utility scale with governance.</p>
+          <ul class="mt-5 space-y-2 text-sm text-neutral-300">
+            <li>• 6–20 gateways, 500–5,000 devices</li>
+            <li>• High-availability NOC monitoring</li>
+            <li>• Role-based access & SSO</li>
+            <li>• Data retention & audit logs</li>
+            <li>• Enhanced SLA & on-call support</li>
+          </ul>
+          <p class="mt-6 text-2xl font-semibold hidden price">Custom quotation</p>
+          <a href="/#contact" class="mt-6 inline-flex items-center justify-center rounded-xl border border-neutral-700 px-4 py-2 hover:bg-neutral-900">Discuss Scope</a>
+        </div>
+
+        <!-- Enterprise+ -->
+        <div class="rounded-2xl border border-neutral-800 bg-neutral-950 p-6 flex flex-col">
+          <h2 class="text-xl font-semibold">Enterprise+</h2>
+          <p class="mt-2 text-sm text-neutral-400">Mission-critical with AI at scale.</p>
+          <ul class="mt-5 space-y-2 text-sm text-neutral-300">
+            <li>• 20+ gateways, 5,000+ devices</li>
+            <li>• Dedicated tenant & VPC peering</li>
+            <li>• Custom AI models & retraining</li>
+            <li>• On-prem / hybrid options</li>
+            <li>• Premium SLA & governance</li>
+          </ul>
+          <p class="mt-6 text-2xl font-semibold hidden price">Custom quotation</p>
+          <a href="/#contact" class="mt-6 inline-flex items-center justify-center rounded-xl bg-white text-black px-4 py-2 hover:opacity-90">Book a Call</a>
+        </div>
+      </div>
+
+      <!-- Add-ons -->
+      <section class="mt-14">
+        <h3 class="text-lg font-semibold">Popular Add-Ons</h3>
+        <ul class="mt-4 grid md:grid-cols-2 gap-3 text-sm text-neutral-300">
+          <li class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">• Sensor bundles (pressure, ultrasonic, vibration, AQI)</li>
+          <li class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">• Advanced analytics & model retraining</li>
+          <li class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">• SCADA/ERP/API integrations</li>
+          <li class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">• On-site commissioning & training</li>
+        </ul>
+      </section>
+
+      <!-- FAQs -->
+      <section class="mt-16 max-w-3xl">
+        <h3 class="text-lg font-semibold">FAQs</h3>
+        <div class="mt-4 space-y-4 text-neutral-300">
+          <details class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">
+            <summary class="cursor-pointer font-medium">Do you provide devices and installation?</summary>
+            <p class="mt-2 text-neutral-400">Yes. We provide sensors, gateways, RF planning, commissioning, and training as part of scoped deployments.</p>
+          </details>
+          <details class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">
+            <summary class="cursor-pointer font-medium">Can we integrate with our SCADA/ERP?</summary>
+            <p class="mt-2 text-neutral-400">Yes. We expose secure APIs/webhooks and can deliver custom integrations during onboarding.</p>
+          </details>
+          <details class="bg-neutral-950 border border-neutral-800 rounded-xl p-4">
+            <summary class="cursor-pointer font-medium">Do you support SLAs?</summary>
+            <p class="mt-2 text-neutral-400">We offer tiered SLAs from business-hours support to premium 24/7 with on-call and uptime targets.</p>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-20 border-t border-neutral-900">
+    <div class="max-w-7xl mx-auto px-6 py-10 text-sm text-neutral-400">
+      © <span id="y"></span> Meshteq • A Cahaya Hornbill initiative
+    </div>
+  </footer>
+
+  <!-- Tiny helper (year + optional price toggle) -->
+  <script>
+    // Year
+    document.getElementById('y').textContent = new Date().getFullYear();
+    // Show "Starting at" prices on Pilot/Campus if you set data-show-prices="true" on #plans
+    (function () {
+      var wrapper = document.getElementById('plans');
+      if (!wrapper) return;
+      var show = (wrapper.getAttribute('data-show-prices') === 'true');
+      wrapper.querySelectorAll('.price').forEach(function(p){ if (show) p.classList.remove('hidden'); });
+    })();
+  </script>
+</body>
+</html>
