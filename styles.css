@@ -86,7 +86,7 @@ a:hover{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  height:64px;
+  height:88px;
 }
 
 .brand{
@@ -98,7 +98,7 @@ a:hover{
 }
 
 .logo{
-  height:52px;
+  height:68px;
   width:auto;
 }
 
