@@ -226,6 +226,13 @@
 }
 #mq-bubble:hover  { transform:scale(1.08); box-shadow:0 6px 28px var(--mq-accent-glow),0 2px 10px rgba(0,0,0,0.5); }
 #mq-bubble:active { transform:scale(0.96); }
+@keyframes mqPulse {
+  0%, 100% { box-shadow: 0 4px 20px var(--mq-accent-glow), 0 0 0 0 rgba(74,148,240,0.5); }
+  50%       { box-shadow: 0 4px 20px var(--mq-accent-glow), 0 0 0 12px rgba(74,148,240,0); }
+}
+#mq-bubble:not(.open) {
+  animation: mqPulse 2.5s ease-in-out infinite;
+}
 #mq-bubble svg { transition:opacity 0.2s,transform 0.2s; }
 #mq-bubble .mq-icon-chat  { position:absolute; }
 #mq-bubble .mq-icon-close { position:absolute;opacity:0;transform:rotate(-90deg); }
