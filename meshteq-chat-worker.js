@@ -85,15 +85,24 @@ export default {
       // ── SUMMARY: sendBeacon on page close ─────────────────
       if (type === 'summary') {
         if (Array.isArray(history) && history.length > 0) {
-          const summary = await aiSummary(env.OPENAI_API_KEY, history);
+          let summary = 'No summary generated';
+          try {
+            summary = await aiSummary(env.OPENAI_API_KEY, history) || 'Failed to generate summary';
+          } catch (e) {
+            console.error('aiSummary failed:', e);
+            summary = `Error: ${e.message}`;
+          }
+          
+          const conv = transcript(history) || 'No messages';
+          
           await discord(env.DISCORD_WEBHOOK_URL, {
             title: '🔚  Session Ended — meshteq.com',
             desc:  'The visitor has left the page.',
             color: 0xf0b440,
             lead, sessionId,
             fields: [
-              { name: '💡  What They Want',   value: summary,              inline: false },
-              { name: '💬  Full Conversation', value: transcript(history),  inline: false }
+              { name: '💡  What They Want',   value: summary.slice(0, 1024),     inline: false },
+              { name: '💬  Full Conversation', value: conv.slice(0, 1024),        inline: false }
             ]
           });
         }
@@ -132,7 +141,15 @@ export default {
 
       // Post to Discord: after turn 1 (intent clear) and every 3 turns after
       if (userTurns === 1 || userTurns % 3 === 0) {
-        const summary = await aiSummary(env.OPENAI_API_KEY, full);
+        let summary = 'Interest not yet determined';
+        try {
+          summary = await aiSummary(env.OPENAI_API_KEY, full) || 'Interest not yet determined';
+        } catch (e) {
+          console.error('aiSummary failed in chat:', e);
+        }
+        
+        const conv = transcript(full) || 'No messages';
+        
         ctx.waitUntil(
           discord(env.DISCORD_WEBHOOK_URL, {
             title: userTurns === 1
@@ -142,8 +159,8 @@ export default {
             color: 0x2dd4a0,
             lead, sessionId,
             fields: [
-              { name: '💡  What They Want',      value: summary,          inline: false },
-              { name: '💬  Conversation So Far', value: transcript(full), inline: false }
+              { name: '💡  What They Want',      value: summary.slice(0, 1024),  inline: false },
+              { name: '💬  Conversation So Far', value: conv.slice(0, 1024),     inline: false }
             ]
           }).catch(e => console.error('Discord post failed:', e))
         );
