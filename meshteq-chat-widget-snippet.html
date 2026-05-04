@@ -399,8 +399,6 @@
     input.value = '';
     input.style.height = 'auto';
     appendMsg('user', text);
-    history.push({ role: 'user', content: text });
-    saveSession();
     setLoading(true);
     showTyping();
 
@@ -413,6 +411,7 @@
       const data = await res.json();
       removeTyping();
 
+      history.push({ role: 'user', content: text });
       if (data.reply) {
         appendMsg('bot', data.reply);
         history.push({ role: 'assistant', content: data.reply });
@@ -421,6 +420,7 @@
 
     } catch (err) {
       removeTyping();
+      history.push({ role: 'user', content: text });
       appendMsg('bot', "I'm having trouble connecting right now. Please email **sales@meshteq.com** directly.");
       console.error('Chat error:', err);
     } finally {

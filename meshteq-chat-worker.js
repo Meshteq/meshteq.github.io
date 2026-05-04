@@ -47,7 +47,7 @@ Reply with the summary only — no preamble, no full stop.`;
 
 // ============================================================
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
 
     if (request.method === 'OPTIONS') return cors(null, 204, origin);
@@ -133,18 +133,20 @@ export default {
       // Post to Discord: after turn 1 (intent clear) and every 3 turns after
       if (userTurns === 1 || userTurns % 3 === 0) {
         const summary = await aiSummary(env.OPENAI_API_KEY, full);
-        discord(env.DISCORD_WEBHOOK_URL, {
-          title: userTurns === 1
-            ? '💬  First Message — meshteq.com'
-            : `💬  Conversation Update (${userTurns} turns) — meshteq.com`,
-          desc:  userTurns === 1 ? 'The visitor has sent their first message.' : 'Ongoing conversation.',
-          color: 0x2dd4a0,
-          lead, sessionId,
-          fields: [
-            { name: '💡  What They Want',      value: summary,             inline: false },
-            { name: '💬  Conversation So Far', value: transcript(full),    inline: false }
-          ]
-        }).catch(e => console.error('Discord post failed:', e));
+        ctx.waitUntil(
+          discord(env.DISCORD_WEBHOOK_URL, {
+            title: userTurns === 1
+              ? '💬  First Message — meshteq.com'
+              : `💬  Conversation Update (${userTurns} turns) — meshteq.com`,
+            desc:  userTurns === 1 ? 'The visitor has sent their first message.' : 'Ongoing conversation.',
+            color: 0x2dd4a0,
+            lead, sessionId,
+            fields: [
+              { name: '💡  What They Want',      value: summary,          inline: false },
+              { name: '💬  Conversation So Far', value: transcript(full), inline: false }
+            ]
+          }).catch(e => console.error('Discord post failed:', e))
+        );
       }
 
       return cors(JSON.stringify({ reply, lead, leadCaptured: true }), 200, origin);

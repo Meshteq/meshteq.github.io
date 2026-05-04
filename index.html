@@ -227,6 +227,13 @@
 }
 #mq-bubble:hover  { transform:scale(1.08); box-shadow:0 6px 28px var(--mq-accent-glow),0 2px 10px rgba(0,0,0,0.5); }
 #mq-bubble:active { transform:scale(0.96); }
+@keyframes mqPulse {
+  0%, 100% { box-shadow: 0 4px 20px var(--mq-accent-glow), 0 0 0 0 rgba(74,148,240,0.5); }
+  50%       { box-shadow: 0 4px 20px var(--mq-accent-glow), 0 0 0 12px rgba(74,148,240,0); }
+}
+#mq-bubble:not(.open) {
+  animation: mqPulse 2.5s ease-in-out infinite;
+}
 #mq-bubble svg { transition:opacity 0.2s,transform 0.2s; }
 #mq-bubble .mq-icon-chat  { position:absolute; }
 #mq-bubble .mq-icon-close { position:absolute;opacity:0;transform:rotate(-90deg); }
@@ -355,23 +362,17 @@
 </style>
 
 <div id="mq-chat-root">
-  <!-- Floating bubble -->
   <button id="mq-bubble" aria-label="Chat with Meshteq">
     <span id="mq-badge" aria-hidden="true">1</span>
-
     <svg class="mq-icon-chat" width="24" height="24" viewBox="0 0 24 24" fill="none">
       <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-
     <svg class="mq-icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
 
-  <!-- Chat panel -->
   <div id="mq-panel" role="dialog" aria-label="Chat with Meshteq">
-
-    <!-- Header -->
     <div id="mq-header">
       <div class="mq-avatar">A</div>
       <div class="mq-header-info">
@@ -381,36 +382,32 @@
       <span class="mq-powered">AI</span>
     </div>
 
-    <!-- Pre-chat form (shown first) -->
+    <!-- Pre-chat form -->
     <div id="mq-prechat">
       <div class="mq-prechat-intro">
         <strong>Before we chat</strong>
         Share a few details so our team can follow up with you.
       </div>
-
       <div class="mq-field">
         <label for="mq-f-name">Full Name <span style="color:var(--mq-red)">*</span></label>
-        <input type="text" id="mq-f-name" placeholder="e.g. Ahmad Razali" autocomplete="name" />
+        <input type="text" id="mq-f-name" placeholder="e.g. Ahmad Razali" autocomplete="name"/>
         <div class="mq-field-error" id="mq-err-name">Please enter your name</div>
       </div>
-
       <div class="mq-field">
         <label for="mq-f-company">Company <span class="mq-optional">(optional)</span></label>
-        <input type="text" id="mq-f-company" placeholder="e.g. Petronas" autocomplete="organization" />
+        <input type="text" id="mq-f-company" placeholder="e.g. Petronas" autocomplete="organization"/>
       </div>
-
       <div class="mq-field-row">
         <div class="mq-field">
           <label for="mq-f-email">Email <span style="color:var(--mq-red)">*</span></label>
-          <input type="email" id="mq-f-email" placeholder="you@company.com" autocomplete="email" />
+          <input type="email" id="mq-f-email" placeholder="you@company.com" autocomplete="email"/>
           <div class="mq-field-error" id="mq-err-email">Enter a valid email</div>
         </div>
         <div class="mq-field">
           <label for="mq-f-phone">Phone <span class="mq-optional">(optional)</span></label>
-          <input type="tel" id="mq-f-phone" placeholder="+60 12 345 6789" autocomplete="tel" />
+          <input type="tel" id="mq-f-phone" placeholder="+60 12 345 6789" autocomplete="tel"/>
         </div>
       </div>
-
       <button id="mq-prechat-submit">
         Start Chat
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -419,20 +416,17 @@
       </button>
     </div>
 
-    <!-- Chat messages (hidden until form submitted) -->
+    <!-- Chat view (hidden until form submitted) -->
     <div id="mq-messages" class="mq-hidden" role="log" aria-live="polite"></div>
-
-    <!-- Input (hidden until form submitted) -->
     <div id="mq-input-wrap" class="mq-hidden">
-      <textarea id="mq-input" placeholder="Type a message..." rows="1" aria-label="Chat message" maxlength="1000"></textarea>
-      <button id="mq-send" aria-label="Send message">
+      <textarea id="mq-input" placeholder="Type a message..." rows="1" maxlength="1000"></textarea>
+      <button id="mq-send" aria-label="Send">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
     </div>
 
-    <!-- Footer -->
     <div id="mq-footer">
       <a href="mailto:sales@meshteq.com">sales@meshteq.com</a> · <a href="https://meshteq.com" target="_blank" rel="noopener">meshteq.com</a>
     </div>
@@ -612,8 +606,6 @@
     input.value = '';
     input.style.height = 'auto';
     appendMsg('user', text);
-    history.push({ role: 'user', content: text });
-    saveSession();
     setLoading(true);
     showTyping();
 
@@ -626,6 +618,7 @@
       const data = await res.json();
       removeTyping();
 
+      history.push({ role: 'user', content: text });
       if (data.reply) {
         appendMsg('bot', data.reply);
         history.push({ role: 'assistant', content: data.reply });
@@ -634,6 +627,7 @@
 
     } catch (err) {
       removeTyping();
+      history.push({ role: 'user', content: text });
       appendMsg('bot', "I'm having trouble connecting right now. Please email **sales@meshteq.com** directly.");
       console.error('Chat error:', err);
     } finally {
