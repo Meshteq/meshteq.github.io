@@ -1,8 +1,11 @@
 <!-- ============================================================
-     MESHTEQ CHAT WIDGET
+     MESHTEQ CHAT WIDGET — v2
      Paste this block just before </body> in your index.html
-     
-     Update WORKER_URL below after deploying meshteq-chat-worker.js
+
+     Changes from v1:
+     - Pre-chat form collects name, company, phone, email FIRST
+     - Discord fires immediately on form submit
+     - Email updated to sales@meshteq.com
      ============================================================ -->
 
 <style>
@@ -25,30 +28,21 @@
   --mq-user-bubble: #1a3a5c;
   --mq-bot-bubble: #1e2530;
   --mq-green: #2dd4a0;
+  --mq-red: #f06060;
   --mq-radius: 16px;
   --mq-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
 }
 
 /* Bubble toggle button */
 #mq-bubble {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--mq-accent);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--mq-accent); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 20px var(--mq-accent-glow), 0 2px 8px rgba(0,0,0,0.4);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  position: relative;
-  overflow: hidden;
+  position: relative; overflow: hidden;
 }
-#mq-bubble:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 28px var(--mq-accent-glow), 0 2px 10px rgba(0,0,0,0.5);
-}
+#mq-bubble:hover { transform: scale(1.08); box-shadow: 0 6px 28px var(--mq-accent-glow), 0 2px 10px rgba(0,0,0,0.5); }
 #mq-bubble:active { transform: scale(0.96); }
 #mq-bubble svg { transition: opacity 0.2s, transform 0.2s; }
 #mq-bubble .mq-icon-chat { position: absolute; }
@@ -58,176 +52,137 @@
 
 /* Unread badge */
 #mq-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 18px;
-  height: 18px;
-  background: #f06060;
-  border: 2px solid var(--mq-bg);
-  border-radius: 50%;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transform: scale(0);
-  transition: opacity 0.2s, transform 0.2s;
+  position: absolute; top: -2px; right: -2px;
+  width: 18px; height: 18px; background: #f06060;
+  border: 2px solid var(--mq-bg); border-radius: 50%;
+  font-size: 10px; font-weight: 700; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(0); transition: opacity 0.2s, transform 0.2s;
 }
 #mq-badge.show { opacity: 1; transform: scale(1); }
 
 /* Chat panel */
 #mq-panel {
-  position: absolute;
-  bottom: 68px;
-  right: 0;
-  width: 360px;
-  max-height: 560px;
-  display: flex;
-  flex-direction: column;
-  background: var(--mq-bg);
-  border: 1px solid var(--mq-border);
-  border-radius: var(--mq-radius);
-  box-shadow: var(--mq-shadow);
-  overflow: hidden;
-  opacity: 0;
+  position: absolute; bottom: 68px; right: 0;
+  width: 360px; max-height: 580px;
+  display: flex; flex-direction: column;
+  background: var(--mq-bg); border: 1px solid var(--mq-border);
+  border-radius: var(--mq-radius); box-shadow: var(--mq-shadow);
+  overflow: hidden; opacity: 0;
   transform: translateY(16px) scale(0.97);
-  transform-origin: bottom right;
-  pointer-events: none;
+  transform-origin: bottom right; pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
-#mq-panel.open {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  pointer-events: all;
-}
+#mq-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+
 @media (max-width: 420px) {
-  #mq-panel {
-    width: calc(100vw - 24px);
-    right: -8px;
-  }
+  #mq-panel { width: calc(100vw - 24px); right: -8px; }
   #mq-chat-root { right: 16px; bottom: 16px; }
 }
 
 /* Panel header */
 #mq-header {
-  padding: 14px 16px;
-  background: var(--mq-surface);
+  padding: 14px 16px; background: var(--mq-surface);
   border-bottom: 1px solid var(--mq-border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px; flex-shrink: 0;
 }
 .mq-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  width: 34px; height: 34px; border-radius: 50%;
   background: linear-gradient(135deg, var(--mq-accent), #2d6abf);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
-  color: #fff;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; color: #fff; flex-shrink: 0;
 }
 .mq-header-info { flex: 1; }
-.mq-header-name {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--mq-text);
-  line-height: 1.2;
-}
+.mq-header-name { font-weight: 600; font-size: 0.85rem; color: var(--mq-text); line-height: 1.2; }
 .mq-header-status {
-  font-size: 0.7rem;
-  color: var(--mq-muted);
-  margin-top: 1px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-size: 0.7rem; color: var(--mq-muted); margin-top: 1px;
+  display: flex; align-items: center; gap: 4px;
 }
-.mq-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mq-green);
-  flex-shrink: 0;
-}
-.mq-powered {
-  font-size: 0.62rem;
-  color: var(--mq-muted);
-  opacity: 0.7;
-  font-style: italic;
-}
+.mq-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mq-green); flex-shrink: 0; }
+.mq-powered { font-size: 0.62rem; color: var(--mq-muted); opacity: 0.7; font-style: italic; }
 
-/* Messages */
+/* ── PRE-CHAT FORM ─────────────────────────────────────── */
+#mq-prechat {
+  flex: 1; overflow-y: auto; padding: 20px 16px;
+  display: flex; flex-direction: column; gap: 0;
+}
+#mq-prechat::-webkit-scrollbar { width: 4px; }
+#mq-prechat::-webkit-scrollbar-thumb { background: var(--mq-border); border-radius: 2px; }
+
+.mq-prechat-intro {
+  font-size: 0.82rem; color: var(--mq-muted); line-height: 1.6;
+  margin-bottom: 16px;
+}
+.mq-prechat-intro strong { color: var(--mq-text); display: block; font-size: 0.9rem; margin-bottom: 4px; }
+
+.mq-field { margin-bottom: 12px; }
+.mq-field label {
+  display: block; font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--mq-muted); margin-bottom: 5px;
+}
+.mq-field input {
+  width: 100%; background: var(--mq-surface2);
+  border: 1px solid var(--mq-border); border-radius: 8px;
+  padding: 9px 12px; color: var(--mq-text);
+  font-family: inherit; font-size: 0.82rem; outline: none;
+  transition: border-color 0.2s;
+}
+.mq-field input::placeholder { color: var(--mq-muted); }
+.mq-field input:focus { border-color: var(--mq-accent); }
+.mq-field input.error { border-color: var(--mq-red); }
+.mq-field-error { font-size: 0.68rem; color: var(--mq-red); margin-top: 4px; display: none; }
+.mq-field-error.show { display: block; }
+
+.mq-field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+#mq-prechat-submit {
+  width: 100%; padding: 10px; border-radius: 8px;
+  background: var(--mq-accent); border: none; color: #fff;
+  font-family: inherit; font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; margin-top: 4px;
+  transition: background 0.2s, transform 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+#mq-prechat-submit:hover { background: #5ea8ff; }
+#mq-prechat-submit:active { transform: scale(0.98); }
+#mq-prechat-submit:disabled { background: var(--mq-surface2); color: var(--mq-muted); cursor: not-allowed; }
+
+.mq-optional { font-size: 0.65rem; color: var(--mq-muted); font-weight: 400; margin-left: 4px; }
+
+/* ── CHAT MESSAGES ─────────────────────────────────────── */
 #mq-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex: 1; overflow-y: auto; padding: 16px 14px;
+  display: flex; flex-direction: column; gap: 10px;
   scroll-behavior: smooth;
 }
 #mq-messages::-webkit-scrollbar { width: 4px; }
 #mq-messages::-webkit-scrollbar-thumb { background: var(--mq-border); border-radius: 2px; }
 
-.mq-msg {
-  display: flex;
-  flex-direction: column;
-  max-width: 88%;
-  animation: mqFadeUp 0.25s ease-out both;
-}
+.mq-msg { display: flex; flex-direction: column; max-width: 88%; animation: mqFadeUp 0.25s ease-out both; }
 .mq-msg.user { align-self: flex-end; align-items: flex-end; }
-.mq-msg.bot { align-self: flex-start; align-items: flex-start; }
-@keyframes mqFadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+.mq-msg.bot  { align-self: flex-start; align-items: flex-start; }
+@keyframes mqFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 .mq-bubble {
-  padding: 9px 13px;
-  border-radius: 12px;
-  line-height: 1.5;
-  font-size: 0.825rem;
-  word-wrap: break-word;
+  padding: 9px 13px; border-radius: 12px;
+  line-height: 1.5; font-size: 0.825rem; word-wrap: break-word;
 }
 .mq-msg.user .mq-bubble {
-  background: var(--mq-user-bubble);
-  color: var(--mq-text);
-  border-bottom-right-radius: 4px;
-  border: 1px solid rgba(74,148,240,0.2);
+  background: var(--mq-user-bubble); color: var(--mq-text);
+  border-bottom-right-radius: 4px; border: 1px solid rgba(74,148,240,0.2);
 }
 .mq-msg.bot .mq-bubble {
-  background: var(--mq-bot-bubble);
-  color: var(--mq-text);
-  border-bottom-left-radius: 4px;
-  border: 1px solid var(--mq-border);
+  background: var(--mq-bot-bubble); color: var(--mq-text);
+  border-bottom-left-radius: 4px; border: 1px solid var(--mq-border);
 }
 .mq-msg.bot .mq-bubble strong { color: var(--mq-accent); font-weight: 600; }
-.mq-time {
-  font-size: 0.62rem;
-  color: var(--mq-muted);
-  margin-top: 3px;
-  padding: 0 3px;
-}
+.mq-time { font-size: 0.62rem; color: var(--mq-muted); margin-top: 3px; padding: 0 3px; }
 
 /* Typing indicator */
-.mq-typing-dots {
-  display: flex;
-  gap: 4px;
-  padding: 4px 2px;
-  align-items: center;
-}
+.mq-typing-dots { display: flex; gap: 4px; padding: 4px 2px; align-items: center; }
 .mq-typing-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mq-muted);
+  width: 6px; height: 6px; border-radius: 50%; background: var(--mq-muted);
   animation: mqBounce 1.1s ease-in-out infinite;
 }
 .mq-typing-dots span:nth-child(1) { animation-delay: 0s; }
@@ -238,124 +193,116 @@
   30% { transform: translateY(-5px); opacity: 1; }
 }
 
-/* Lead captured confirmation */
-.mq-lead-captured {
-  background: rgba(45, 212, 160, 0.08);
-  border: 1px solid rgba(45, 212, 160, 0.3);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 0.75rem;
-  color: var(--mq-green);
-  text-align: center;
-  align-self: center;
-  max-width: 100%;
-}
-
 /* Input area */
 #mq-input-wrap {
-  padding: 12px 14px;
-  border-top: 1px solid var(--mq-border);
+  padding: 12px 14px; border-top: 1px solid var(--mq-border);
   background: var(--mq-surface);
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-  flex-shrink: 0;
+  display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
 }
 #mq-input {
-  flex: 1;
-  background: var(--mq-surface2);
-  border: 1px solid var(--mq-border);
-  border-radius: 10px;
-  padding: 9px 12px;
-  color: var(--mq-text);
-  font-family: inherit;
-  font-size: 0.82rem;
-  line-height: 1.4;
-  resize: none;
-  outline: none;
-  max-height: 100px;
-  transition: border-color 0.2s;
-  overflow-y: auto;
+  flex: 1; background: var(--mq-surface2);
+  border: 1px solid var(--mq-border); border-radius: 10px;
+  padding: 9px 12px; color: var(--mq-text);
+  font-family: inherit; font-size: 0.82rem; line-height: 1.4;
+  resize: none; outline: none; max-height: 100px;
+  transition: border-color 0.2s; overflow-y: auto;
 }
 #mq-input::placeholder { color: var(--mq-muted); }
 #mq-input:focus { border-color: var(--mq-accent); }
 
 #mq-send {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--mq-accent);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background 0.2s, transform 0.15s;
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--mq-accent); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.2s, transform 0.15s;
 }
 #mq-send:hover { background: #5ea8ff; }
 #mq-send:active { transform: scale(0.92); }
 #mq-send:disabled { background: var(--mq-surface2); cursor: not-allowed; }
-#mq-send:disabled svg path { fill: var(--mq-muted); }
+#mq-send:disabled svg path { stroke: var(--mq-muted); }
 
-/* Footer branding */
+/* Footer */
 #mq-footer {
-  padding: 7px 14px;
-  background: var(--mq-surface);
+  padding: 7px 14px; background: var(--mq-surface);
   border-top: 1px solid var(--mq-border);
-  font-size: 0.62rem;
-  color: var(--mq-muted);
-  text-align: center;
-  flex-shrink: 0;
+  font-size: 0.62rem; color: var(--mq-muted); text-align: center; flex-shrink: 0;
 }
 #mq-footer a { color: var(--mq-accent); text-decoration: none; }
+
+.mq-hidden { display: none !important; }
 </style>
 
 <div id="mq-chat-root">
   <!-- Floating bubble -->
   <button id="mq-bubble" aria-label="Chat with Meshteq" title="Chat with us">
     <span id="mq-badge" aria-hidden="true">1</span>
-
-    <!-- Chat icon -->
-    <svg class="mq-icon-chat" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg class="mq-icon-chat" width="24" height="24" viewBox="0 0 24 24" fill="none">
       <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-
-    <!-- Close icon -->
-    <svg class="mq-icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg class="mq-icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none">
       <path d="M18 6L6 18M6 6L18 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </button>
 
   <!-- Chat panel -->
   <div id="mq-panel" role="dialog" aria-label="Chat with Meshteq">
+
     <!-- Header -->
     <div id="mq-header">
       <div class="mq-avatar">A</div>
       <div class="mq-header-info">
         <div class="mq-header-name">Aiden · Meshteq</div>
-        <div class="mq-header-status">
-          <span class="mq-dot"></span>
-          Online · Typically replies instantly
-        </div>
+        <div class="mq-header-status"><span class="mq-dot"></span>Online · Replies instantly</div>
       </div>
       <span class="mq-powered">AI</span>
     </div>
 
-    <!-- Messages -->
-    <div id="mq-messages" role="log" aria-live="polite"></div>
+    <!-- Pre-chat form (shown first) -->
+    <div id="mq-prechat">
+      <div class="mq-prechat-intro">
+        <strong>Before we chat</strong>
+        Please share a few details so our team can follow up with you.
+      </div>
 
-    <!-- Input -->
-    <div id="mq-input-wrap">
-      <textarea
-        id="mq-input"
-        placeholder="Type a message..."
-        rows="1"
-        aria-label="Chat message"
-        maxlength="1000"
-      ></textarea>
+      <div class="mq-field">
+        <label for="mq-f-name">Full Name <span style="color:var(--mq-red)">*</span></label>
+        <input type="text" id="mq-f-name" placeholder="e.g. Ahmad Razali" autocomplete="name" />
+        <div class="mq-field-error" id="mq-err-name">Please enter your name</div>
+      </div>
+
+      <div class="mq-field">
+        <label for="mq-f-company">Company <span class="mq-optional">(optional)</span></label>
+        <input type="text" id="mq-f-company" placeholder="e.g. Petronas" autocomplete="organization" />
+      </div>
+
+      <div class="mq-field-row">
+        <div class="mq-field">
+          <label for="mq-f-email">Email <span style="color:var(--mq-red)">*</span></label>
+          <input type="email" id="mq-f-email" placeholder="you@company.com" autocomplete="email" />
+          <div class="mq-field-error" id="mq-err-email">Please enter a valid email</div>
+        </div>
+        <div class="mq-field">
+          <label for="mq-f-phone">Phone <span class="mq-optional">(optional)</span></label>
+          <input type="tel" id="mq-f-phone" placeholder="+60 12 345 6789" autocomplete="tel" />
+        </div>
+      </div>
+
+      <button id="mq-prechat-submit">
+        Start Chat
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+          <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Chat messages (hidden until form submitted) -->
+    <div id="mq-messages" class="mq-hidden" role="log" aria-live="polite"></div>
+
+    <!-- Input (hidden until form submitted) -->
+    <div id="mq-input-wrap" class="mq-hidden">
+      <textarea id="mq-input" placeholder="Type a message..." rows="1" aria-label="Chat message" maxlength="1000"></textarea>
       <button id="mq-send" aria-label="Send message">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
           <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
@@ -363,7 +310,7 @@
 
     <!-- Footer -->
     <div id="mq-footer">
-      Chat with <a href="https://meshteq.com" target="_blank" rel="noopener">Meshteq</a> · AI-powered assistant
+      <a href="mailto:sales@meshteq.com">sales@meshteq.com</a> · <a href="https://meshteq.com" target="_blank" rel="noopener">meshteq.com</a>
     </div>
   </div>
 </div>
@@ -372,75 +319,82 @@
 (function () {
   'use strict';
 
-  // ── CONFIG ─────────────────────────────────────────────
-  // Update this URL after deploying your Cloudflare Worker
+  // ── CONFIG ──────────────────────────────────────────────
   const WORKER_URL = 'https://meshteq-chat.radz-953.workers.dev';
-
-  const WELCOME_MESSAGE = "Hi there! 👋 I'm Aiden, Meshteq's virtual assistant. I'm here to help you learn about our IoT and AI solutions, or connect you with our team.\n\nWhat brings you here today?";
-
-  const SESSION_KEY = 'mq_chat_session';
-  // ───────────────────────────────────────────────────────
+  const SESSION_KEY = 'mq_chat_v2';
+  // ────────────────────────────────────────────────────────
 
   // State
-  let isOpen = false;
-  let isTyping = false;
-  let history = [];
-  let lead = {};
-  let leadCaptured = false;
-  let sessionId = generateSessionId();
-  let hasShownWelcome = false;
+  let isOpen        = false;
+  let isTyping      = false;
+  let chatStarted   = false;
+  let history       = [];
+  let lead          = {};
+  let sessionId     = generateSessionId();
 
   // Elements
-  const root    = document.getElementById('mq-chat-root');
-  const bubble  = document.getElementById('mq-bubble');
-  const badge   = document.getElementById('mq-badge');
-  const panel   = document.getElementById('mq-panel');
-  const msgs    = document.getElementById('mq-messages');
-  const input   = document.getElementById('mq-input');
-  const sendBtn = document.getElementById('mq-send');
+  const root        = document.getElementById('mq-chat-root');
+  const bubble      = document.getElementById('mq-bubble');
+  const badge       = document.getElementById('mq-badge');
+  const panel       = document.getElementById('mq-panel');
+  const prechat     = document.getElementById('mq-prechat');
+  const msgs        = document.getElementById('mq-messages');
+  const inputWrap   = document.getElementById('mq-input-wrap');
+  const input       = document.getElementById('mq-input');
+  const sendBtn     = document.getElementById('mq-send');
+  const submitBtn   = document.getElementById('mq-prechat-submit');
 
-  // ── INIT ───────────────────────────────────────────────
+  // Form fields
+  const fName       = document.getElementById('mq-f-name');
+  const fCompany    = document.getElementById('mq-f-company');
+  const fEmail      = document.getElementById('mq-f-email');
+  const fPhone      = document.getElementById('mq-f-phone');
+  const errName     = document.getElementById('mq-err-name');
+  const errEmail    = document.getElementById('mq-err-email');
 
+  // ── INIT ────────────────────────────────────────────────
   function init() {
-    // Restore session if exists
+    // Restore session
     try {
       const saved = sessionStorage.getItem(SESSION_KEY);
       if (saved) {
         const session = JSON.parse(saved);
-        history = session.history || [];
-        lead = session.lead || {};
-        leadCaptured = session.leadCaptured || false;
-        sessionId = session.sessionId || sessionId;
-        hasShownWelcome = true;
+        if (session.chatStarted) {
+          chatStarted = true;
+          lead        = session.lead  || {};
+          history     = session.history || [];
+          sessionId   = session.sessionId || sessionId;
 
-        // Replay messages into UI without triggering API
-        history.forEach(m => appendMessage(m.role === 'user' ? 'user' : 'bot', m.content, false));
-        if (leadCaptured) appendLeadConfirmation();
+          // Restore UI to chat view
+          showChatView();
+          history.forEach(m => appendMessage(m.role === 'user' ? 'user' : 'bot', m.content, false));
+        }
       }
-    } catch (e) {
-      // Session restore failed — start fresh
-    }
+    } catch (e) { /* start fresh */ }
 
-    // Show badge after 3 seconds to draw attention
-    if (!leadCaptured) {
+    // Show badge after 3s
+    if (!chatStarted) {
       setTimeout(() => badge.classList.add('show'), 3000);
     }
 
     bindEvents();
   }
 
-  // ── EVENTS ─────────────────────────────────────────────
-
+  // ── EVENTS ──────────────────────────────────────────────
   function bindEvents() {
     bubble.addEventListener('click', togglePanel);
+
+    submitBtn.addEventListener('click', handleFormSubmit);
+
+    // Allow Enter in name/email fields to submit
+    [fName, fEmail, fCompany, fPhone].forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') handleFormSubmit(); });
+    });
 
     sendBtn.addEventListener('click', handleSend);
 
     input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
     });
 
     input.addEventListener('input', () => {
@@ -448,7 +402,6 @@
       input.style.height = Math.min(input.scrollHeight, 100) + 'px';
     });
 
-    // Close on outside click
     document.addEventListener('click', e => {
       if (isOpen && !root.contains(e.target)) togglePanel(false);
     });
@@ -461,135 +414,167 @@
 
     if (isOpen) {
       badge.classList.remove('show');
-
-      if (!hasShownWelcome) {
-        hasShownWelcome = true;
-        setTimeout(() => {
-          appendMessage('bot', WELCOME_MESSAGE);
-        }, 350);
-      }
-
-      setTimeout(() => input.focus(), 300);
-      scrollToBottom();
+      setTimeout(() => {
+        if (chatStarted) { input.focus(); scrollToBottom(); }
+        else fName.focus();
+      }, 300);
     }
   }
 
-  // ── SEND MESSAGE ───────────────────────────────────────
+  // ── PRE-CHAT FORM ────────────────────────────────────────
+  async function handleFormSubmit() {
+    if (isTyping) return;
 
+    // Validate
+    let valid = true;
+
+    const nameVal = fName.value.trim();
+    if (!nameVal) {
+      fName.classList.add('error');
+      errName.classList.add('show');
+      valid = false;
+    } else {
+      fName.classList.remove('error');
+      errName.classList.remove('show');
+    }
+
+    const emailVal = fEmail.value.trim();
+    if (!emailVal || !isValidEmail(emailVal)) {
+      fEmail.classList.add('error');
+      errEmail.classList.add('show');
+      valid = false;
+    } else {
+      fEmail.classList.remove('error');
+      errEmail.classList.remove('show');
+    }
+
+    if (!valid) return;
+
+    lead = {
+      name:    nameVal,
+      company: fCompany.value.trim() || null,
+      email:   emailVal,
+      phone:   fPhone.value.trim()   || null
+    };
+
+    // Disable form while submitting
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Starting chat...';
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'init', lead, sessionId })
+      });
+
+      const data = await res.json();
+
+      // Switch to chat view
+      chatStarted = true;
+      showChatView();
+
+      if (data.reply) {
+        appendMessage('bot', data.reply);
+        history.push({ role: 'assistant', content: data.reply });
+      }
+
+      saveSession();
+      input.focus();
+
+    } catch (err) {
+      console.error('Init error:', err);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Start Chat <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+      // Show error in form area
+      const errDiv = document.createElement('div');
+      errDiv.style.cssText = 'color:var(--mq-red);font-size:0.75rem;margin-top:8px;text-align:center';
+      errDiv.textContent = 'Connection error. Please try again.';
+      submitBtn.after(errDiv);
+      setTimeout(() => errDiv.remove(), 4000);
+    }
+  }
+
+  function showChatView() {
+    prechat.classList.add('mq-hidden');
+    msgs.classList.remove('mq-hidden');
+    inputWrap.classList.remove('mq-hidden');
+  }
+
+  // ── CHAT ─────────────────────────────────────────────────
   async function handleSend() {
     const text = input.value.trim();
     if (!text || isTyping) return;
 
-    // Clear input
     input.value = '';
     input.style.height = 'auto';
 
-    // Append user message
     appendMessage('user', text);
     history.push({ role: 'user', content: text });
     saveSession();
-
-    // Disable input while waiting
     setLoading(true);
 
     try {
-      const response = await callWorker(text);
+      showTypingIndicator();
 
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          history: history.slice(-12),
+          lead,
+          sessionId
+        })
+      });
+
+      const data = await res.json();
       removeTypingIndicator();
 
-      if (response.reply) {
-        appendMessage('bot', response.reply);
-        history.push({ role: 'assistant', content: response.reply });
-      }
-
-      if (response.lead) {
-        lead = { ...lead, ...response.lead };
-      }
-
-      if (response.leadCaptured && !leadCaptured) {
-        leadCaptured = true;
-        appendLeadConfirmation();
+      if (data.reply) {
+        appendMessage('bot', data.reply);
+        history.push({ role: 'assistant', content: data.reply });
       }
 
       saveSession();
 
     } catch (err) {
       removeTypingIndicator();
-      appendMessage('bot', "I'm having trouble connecting right now. Please try again in a moment, or email us at **hello@meshteq.com**.");
+      appendMessage('bot', "I'm having trouble connecting. Please try again or email us at **sales@meshteq.com**.");
       console.error('Chat error:', err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function callWorker(message) {
-    showTypingIndicator();
-
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        history: history.slice(-12), // send last 12 turns
-        lead,
-        sessionId
-      })
-    });
-
-    if (!res.ok) {
-      throw new Error(`Worker responded with status ${res.status}`);
-    }
-
-    return await res.json();
-  }
-
-  // ── UI HELPERS ─────────────────────────────────────────
-
+  // ── UI HELPERS ───────────────────────────────────────────
   function appendMessage(role, content, scroll = true) {
     const wrapper = document.createElement('div');
     wrapper.className = `mq-msg ${role}`;
 
-    const bubble = document.createElement('div');
-    bubble.className = 'mq-bubble';
-
-    // Render basic markdown: **bold**, *italic*, newlines
-    bubble.innerHTML = renderMarkdown(content);
+    const bub = document.createElement('div');
+    bub.className = 'mq-bubble';
+    bub.innerHTML = renderMarkdown(content);
 
     const time = document.createElement('div');
     time.className = 'mq-time';
     time.textContent = formatTime(new Date());
 
-    wrapper.appendChild(bubble);
+    wrapper.appendChild(bub);
     wrapper.appendChild(time);
     msgs.appendChild(wrapper);
-
     if (scroll) scrollToBottom();
   }
 
-  function appendLeadConfirmation() {
-    const el = document.createElement('div');
-    el.className = 'mq-lead-captured';
-    el.textContent = '✓ Our team has been notified — we\'ll be in touch soon!';
-    msgs.appendChild(el);
-    scrollToBottom();
-  }
-
   function showTypingIndicator() {
-    const existing = msgs.querySelector('.mq-typing-msg');
-    if (existing) return;
-
+    if (msgs.querySelector('.mq-typing-msg')) return;
     const wrapper = document.createElement('div');
     wrapper.className = 'mq-msg bot mq-typing-msg';
-
-    const bubble = document.createElement('div');
-    bubble.className = 'mq-bubble';
-
-    const dots = document.createElement('div');
-    dots.className = 'mq-typing-dots';
-    dots.innerHTML = '<span></span><span></span><span></span>';
-
-    bubble.appendChild(dots);
-    wrapper.appendChild(bubble);
+    const bub = document.createElement('div');
+    bub.className = 'mq-bubble';
+    bub.innerHTML = '<div class="mq-typing-dots"><span></span><span></span><span></span></div>';
+    wrapper.appendChild(bub);
     msgs.appendChild(wrapper);
     scrollToBottom();
   }
@@ -606,63 +591,38 @@
   }
 
   function scrollToBottom() {
-    requestAnimationFrame(() => {
-      msgs.scrollTop = msgs.scrollHeight;
-    });
+    requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; });
   }
 
-  // ── MARKDOWN RENDERER ──────────────────────────────────
-  // Light markdown: **bold**, *italic*, line breaks, URLs
-
+  // ── MARKDOWN ─────────────────────────────────────────────
   function renderMarkdown(text) {
     if (!text) return '';
-
     return text
-      // Escape HTML
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      // Bold
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // Italic
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Email links
       .replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
         '<a href="mailto:$1" style="color:var(--mq-accent)">$1</a>')
-      // URLs
       .replace(/(https?:\/\/[^\s]+)/g,
         '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--mq-accent)">$1</a>')
-      // Line breaks
       .replace(/\n/g, '<br>');
   }
 
-  // ── SESSION ────────────────────────────────────────────
-
+  // ── SESSION ──────────────────────────────────────────────
   function saveSession() {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        history: history.slice(-20),
-        lead,
-        leadCaptured,
-        sessionId
+        chatStarted, lead, sessionId,
+        history: history.slice(-20)
       }));
-    } catch (e) {
-      // sessionStorage not available — continue without persistence
-    }
+    } catch (e) { /* ignore */ }
   }
 
-  // ── UTILS ──────────────────────────────────────────────
+  // ── UTILS ────────────────────────────────────────────────
+  function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
+  function formatTime(date) { return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+  function generateSessionId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-  function formatTime(date) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  function generateSessionId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-
-  // ── START ──────────────────────────────────────────────
   init();
-
 })();
 </script>

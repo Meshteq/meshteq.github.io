@@ -6,13 +6,17 @@
 // Required Secrets (set via wrangler or CF Dashboard):
 //   OPENAI_API_KEY      — OpenAI API key
 //   DISCORD_WEBHOOK_URL — Discord webhook for #website-chat
-//
-// Allowed origin: https://meshteq.com
 // ============================================================
 
 const ALLOWED_ORIGIN = 'https://meshteq.com';
 
-const SYSTEM_PROMPT = `You are Aiden, the virtual assistant for Meshteq Sdn Bhd on the meshteq.com website.
+// ── SYSTEM PROMPT ─────────────────────────────────────────
+function buildSystemPrompt(lead) {
+  const leadContext = lead?.name
+    ? `\n\n## Visitor Details (already collected)\nName: ${lead.name}\nCompany: ${lead.company || 'not provided'}\nPhone: ${lead.phone || 'not provided'}\nEmail: ${lead.email || 'not provided'}\n\nYou already have their details — do NOT ask for them again. Use their first name naturally in conversation.`
+    : '';
+
+  return `You are Aiden, the virtual assistant for Meshteq Sdn Bhd on the meshteq.com website.${leadContext}
 
 ## About Meshteq
 Meshteq Sdn Bhd is a Malaysian technology company specialising in Industrial IoT and AI SaaS solutions. We help enterprises connect their physical assets to intelligent cloud systems — enabling real-time monitoring, predictive maintenance, and data-driven decisions.
@@ -26,29 +30,22 @@ End-to-end IoT infrastructure: device provisioning, LoRaWAN network deployment, 
 Multi-tenant SaaS dashboard for real-time equipment monitoring and performance optimisation. Sensor data flows in from the field, AI surfaces anomalies and recommendations, teams act faster. Suited for oil & gas, manufacturing, utilities, and plantation sectors.
 
 **PrimeModel.ai — Industrial AI Model Platform**
-AI model training and inference platform purpose-built for industrial IoT data. Clean data in, reliable predictions out. Supports predictive maintenance, anomaly detection, and process optimisation.
+AI model training and inference platform purpose-built for industrial IoT data. Supports predictive maintenance, anomaly detection, and process optimisation.
 
 **IoT Engineering Services**
 Custom firmware development (LoRaWAN, BLE, GSM), gateway deployment, protocol bridging (Modbus/4-20mA to MQTT), and field integration. End-to-end from hardware to cloud.
 
 **ESG & GHG Monitoring**
-IoT-based environmental monitoring solutions for ESG reporting, GHG tracking, and regulatory compliance.
-
-## Your Role
-Your job is to:
-1. Welcome visitors and answer questions about Meshteq's products and services accurately.
-2. Understand what the visitor is looking for — their sector, challenge, or use case.
-3. Naturally collect their: full name, email address, and a clear description of what they are interested in or the problem they want to solve.
-4. Once you have all three pieces of information (name + email + interest), call the capture_lead function immediately.
+IoT-based environmental monitoring for ESG reporting, GHG tracking, and regulatory compliance.
 
 ## Conversation Guidelines
 - Be professional, clear, and warm. Not robotic.
-- Keep responses concise — 2 to 4 sentences is usually right.
-- Do NOT ask for all three pieces of information in one message. Collect naturally through conversation.
+- Keep responses concise — 2 to 4 sentences max.
+- Do NOT ask for contact details — they have already been collected upfront.
 - Do NOT invent pricing. Say: "Our team will walk you through pricing based on your specific requirements."
-- If asked about topics outside Meshteq's scope, politely redirect to what you can help with.
-- If a visitor seems ready to be contacted, gently ask for their details even if they haven't offered them.
-- Never repeat the same question twice if the visitor has already answered it.`;
+- If a visitor is ready to move forward, let them know our team at sales@meshteq.com will follow up.
+- If asked about topics outside Meshteq's scope, politely redirect.`;
+}
 
 // ============================================================
 // WORKER ENTRY POINT
@@ -58,7 +55,6 @@ export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
 
-    // CORS preflight
     if (request.method === 'OPTIONS') {
       return corsResponse(null, 204, origin);
     }
@@ -67,7 +63,6 @@ export default {
       return corsResponse(JSON.stringify({ error: 'Method not allowed' }), 405, origin);
     }
 
-    // Validate content type
     const contentType = request.headers.get('Content-Type') || '';
     if (!contentType.includes('application/json')) {
       return corsResponse(JSON.stringify({ error: 'Content-Type must be application/json' }), 400, origin);
@@ -75,9 +70,26 @@ export default {
 
     try {
       const body = await request.json();
-      const { message, history = [], lead = {}, sessionId = '' } = body;
+      const { type, message, history = [], lead = {}, sessionId = '' } = body;
 
-      // Basic input validation
+      // ── INIT: Pre-chat form submitted ──────────────────────
+      // Fires immediately when visitor submits the details form.
+      // Posts to Discord right away — no need to wait for conversation.
+      if (type === 'init') {
+        await postLeadToDiscord(env.DISCORD_WEBHOOK_URL, lead, sessionId, 'new', []);
+
+        const firstName = lead.name?.split(' ')[0] || 'there';
+        const companyLine = lead.company ? ` from ${lead.company}` : '';
+        const greeting = `Hi ${firstName}${companyLine}! 👋 Thanks for getting in touch — I'm Aiden, Meshteq's virtual assistant.\n\nHow can I help you today? Feel free to ask about our IoT and AI solutions, or tell me what challenge you're looking to solve.`;
+
+        return corsResponse(JSON.stringify({
+          reply: greeting,
+          lead,
+          leadCaptured: true
+        }), 200, origin);
+      }
+
+      // ── CHAT: Normal conversation turn ─────────────────────
       if (!message || typeof message !== 'string' || message.trim().length === 0) {
         return corsResponse(JSON.stringify({ error: 'Message is required' }), 400, origin);
       }
@@ -86,43 +98,12 @@ export default {
         return corsResponse(JSON.stringify({ error: 'Message too long' }), 400, origin);
       }
 
-      // Build message array — cap history to last 12 turns to control token cost
       const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: buildSystemPrompt(lead) },
         ...history.slice(-12),
         { role: 'user', content: message.trim() }
       ];
 
-      // OpenAI function tool — capture lead when all info is collected
-      const tools = [
-        {
-          type: 'function',
-          function: {
-            name: 'capture_lead',
-            description: 'Call this function once and only once — when you have collected the visitor\'s full name, email address, and what they are interested in. Do not call it until you have all three.',
-            parameters: {
-              type: 'object',
-              properties: {
-                name: {
-                  type: 'string',
-                  description: 'The visitor\'s full name'
-                },
-                email: {
-                  type: 'string',
-                  description: 'The visitor\'s email address'
-                },
-                interest: {
-                  type: 'string',
-                  description: 'What the visitor is interested in — specific product, service, use case, or problem they want to solve'
-                }
-              },
-              required: ['name', 'email', 'interest']
-            }
-          }
-        }
-      ];
-
-      // Call OpenAI
       const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -132,8 +113,6 @@ export default {
         body: JSON.stringify({
           model: 'gpt-4o-mini',
           messages,
-          tools,
-          tool_choice: 'auto',
           max_tokens: 450,
           temperature: 0.65
         })
@@ -143,68 +122,40 @@ export default {
         const errText = await openAIResponse.text();
         console.error('OpenAI API error:', openAIResponse.status, errText);
         return corsResponse(JSON.stringify({
-          reply: "I'm having a bit of trouble right now. Please try again in a moment, or reach out to us directly at hello@meshteq.com.",
+          reply: "I'm having a bit of trouble right now. Please try again in a moment, or reach out directly at sales@meshteq.com.",
           lead,
-          leadCaptured: false
+          leadCaptured: true
         }), 200, origin);
       }
 
       const data = await openAIResponse.json();
       const choice = data.choices?.[0];
+      if (!choice) throw new Error('No choices returned from OpenAI');
 
-      if (!choice) {
-        throw new Error('No choices returned from OpenAI');
-      }
-
-      // ── Handle lead capture (tool call) ────────────────────
-      if (choice.finish_reason === 'tool_calls' && choice.message?.tool_calls?.length > 0) {
-        const toolCall = choice.message.tool_calls.find(t => t.function.name === 'capture_lead');
-
-        if (toolCall) {
-          let capturedLead = {};
-          try {
-            capturedLead = JSON.parse(toolCall.function.arguments);
-          } catch {
-            console.error('Failed to parse lead arguments:', toolCall.function.arguments);
-            capturedLead = lead;
-          }
-
-          // Post to Discord asynchronously — don't block response
-          const discordPromise = postLeadToDiscord(
-            env.DISCORD_WEBHOOK_URL,
-            capturedLead,
-            history,
-            message,
-            sessionId
-          );
-
-          // Fire and forget
-          event?.waitUntil?.(discordPromise);
-          discordPromise.catch(err => console.error('Discord post failed:', err));
-
-          const firstName = capturedLead.name?.split(' ')[0] || capturedLead.name || 'there';
-
-          return corsResponse(JSON.stringify({
-            reply: `Thank you, ${firstName}! I've passed your details to our team. Someone will be in touch at **${capturedLead.email}** to discuss ${capturedLead.interest}. Is there anything else I can help you with in the meantime?`,
-            lead: capturedLead,
-            leadCaptured: true
-          }), 200, origin);
-        }
-      }
-
-      // ── Normal conversational response ──────────────────────
       const reply = choice.message?.content?.trim() || "I didn't quite catch that — could you rephrase?";
+
+      // Post conversation update to Discord every 5 user turns
+      const turnCount = history.filter(m => m.role === 'user').length + 1;
+      if (turnCount % 5 === 0) {
+        const fullHistory = [
+          ...history,
+          { role: 'user', content: message },
+          { role: 'assistant', content: reply }
+        ];
+        postLeadToDiscord(env.DISCORD_WEBHOOK_URL, lead, sessionId, 'update', fullHistory)
+          .catch(err => console.error('Discord update failed:', err));
+      }
 
       return corsResponse(JSON.stringify({
         reply,
         lead,
-        leadCaptured: false
+        leadCaptured: true
       }), 200, origin);
 
     } catch (err) {
       console.error('Worker unhandled error:', err);
       return corsResponse(JSON.stringify({
-        reply: "Something went wrong on my end. Please try again or email us at hello@meshteq.com.",
+        reply: "Something went wrong on my end. Please try again or email us at sales@meshteq.com.",
         lead: {},
         leadCaptured: false
       }), 200, origin);
@@ -213,63 +164,56 @@ export default {
 };
 
 // ============================================================
-// DISCORD — Post lead notification to #website-chat
+// DISCORD
+// type 'new'    = lead form submitted — fires immediately
+// type 'update' = conversation snapshot every 5 turns
 // ============================================================
 
-async function postLeadToDiscord(webhookUrl, lead, history, lastMessage, sessionId) {
+async function postLeadToDiscord(webhookUrl, lead, sessionId, type = 'new', conversationHistory = []) {
   if (!webhookUrl) {
     console.warn('DISCORD_WEBHOOK_URL not set — skipping Discord post');
     return;
   }
 
-  // Build conversation transcript (last 8 turns for context)
-  const recentHistory = [...history.slice(-8), { role: 'user', content: lastMessage }];
-  const transcript = recentHistory
-    .map(m => `${m.role === 'user' ? '👤' : '🤖'} **${m.role === 'user' ? 'Visitor' : 'Aiden'}:** ${m.content}`)
-    .join('\n')
-    .slice(0, 1800); // Discord embed field limit is 1024, total message ~6000
+  const isNew = type === 'new';
+  const color = isNew ? 0x4a94f0 : 0x2dd4a0;
+  const title = isNew
+    ? '🎯  New Enquiry — meshteq.com'
+    : '💬  Conversation Update — meshteq.com';
 
-  const timestamp = new Date().toISOString();
+  let transcriptField = [];
+  if (conversationHistory.length > 0) {
+    const transcript = conversationHistory
+      .slice(-8)
+      .map(m => `${m.role === 'user' ? '👤' : '🤖'} **${m.role === 'user' ? 'Visitor' : 'Aiden'}:** ${m.content}`)
+      .join('\n')
+      .slice(0, 1800);
+    transcriptField = [{ name: '💬  Conversation', value: transcript, inline: false }];
+  }
 
   const payload = {
     username: 'Meshteq Chat',
     avatar_url: 'https://meshteq.com/favicon.ico',
     embeds: [
       {
-        title: '🎯  New Lead — meshteq.com',
-        description: 'A visitor on the Meshteq website has provided their contact details.',
-        color: 0x4a94f0, // Meshteq blue
+        title,
+        description: isNew
+          ? 'A visitor has submitted their details on meshteq.com.'
+          : 'Ongoing conversation snapshot.',
+        color,
         fields: [
-          {
-            name: '👤  Name',
-            value: lead.name || '—',
-            inline: true
-          },
-          {
-            name: '📧  Email',
-            value: lead.email || '—',
-            inline: true
-          },
-          {
-            name: '\u200B', // zero-width space — forces new row
-            value: '\u200B',
-            inline: true
-          },
-          {
-            name: '💡  Interest',
-            value: lead.interest || '—',
-            inline: false
-          },
-          {
-            name: '💬  Conversation',
-            value: transcript || '—',
-            inline: false
-          }
+          { name: '👤  Name',    value: lead.name    || '—', inline: true },
+          { name: '🏢  Company', value: lead.company || '—', inline: true },
+          { name: '\u200B',      value: '\u200B',             inline: true },
+          { name: '📧  Email',   value: lead.email   || '—', inline: true },
+          { name: '📞  Phone',   value: lead.phone   || '—', inline: true },
+          { name: '\u200B',      value: '\u200B',             inline: true },
+          ...transcriptField
         ],
         footer: {
           text: `meshteq.com · Website Chat${sessionId ? ` · Session ${sessionId.slice(0, 8)}` : ''}`
         },
-        timestamp
+        timestamp: new Date().toISOString()
       }
     ]
   };
@@ -291,8 +235,9 @@ async function postLeadToDiscord(webhookUrl, lead, history, lastMessage, session
 // ============================================================
 
 function corsResponse(body, status, origin) {
-  // Allow meshteq.com in production; allow any origin only for local dev
-  const allowedOrigin = origin === ALLOWED_ORIGIN ? ALLOWED_ORIGIN : (origin.includes('localhost') ? origin : ALLOWED_ORIGIN);
+  const allowedOrigin = origin === ALLOWED_ORIGIN
+    ? ALLOWED_ORIGIN
+    : (origin.includes('localhost') ? origin : ALLOWED_ORIGIN);
 
   return new Response(body, {
     status,
