@@ -488,14 +488,21 @@
     // fetch + keepalive:true is the correct replacement — survives unload,
     // handles CORS, and works in all modern browsers.
     sendSummary = () => {
-      if (!chatStarted || history.length === 0 || beaconSent) return;
+      console.log('[MQ] sendSummary called:', { chatStarted, historyLen: history.length, beaconSent });
+      if (!chatStarted || history.length === 0 || beaconSent) {
+        console.log('[MQ] sendSummary aborted — conditions not met');
+        return;
+      }
       beaconSent = true;
+      console.log('[MQ] Sending summary to worker...', { sessionId, leadName: lead?.name });
       fetch(WORKER_URL, {
         method:    'POST',
         headers:   { 'Content-Type': 'application/json' },
         body:      JSON.stringify({ type: 'summary', history, lead, sessionId }),
         keepalive: true   // survives page unload
-      }).catch(() => {}); // fire and forget
+      })
+        .then(r => console.log('[MQ] Summary response:', r.status, r.ok))
+        .catch(e => console.error('[MQ] Summary failed:', e));
     };
 
     // Trigger 1: tab hidden or page closed
