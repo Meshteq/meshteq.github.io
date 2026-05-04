@@ -523,6 +523,7 @@
   let isOpen = false, isTyping = false, chatStarted = false;
   let history = [], lead = {}, sessionId = uid();
   let summaryBeaconSent = false;
+  let firstMessageSent = false, userTurns = 0;
 
   const $ = id => document.getElementById(id);
   const root      = $('mq-chat-root');
@@ -559,11 +560,18 @@
     // Show badge after 3s
     if (!chatStarted) setTimeout(() => badge.classList.add('show'), 3000);
 
-    // Send summary to Discord when visitor leaves
+    // Send Session Ended notification when visitor closes/leaves tab
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden' && chatStarted && history.length > 0 && !summaryBeaconSent) {
         summaryBeaconSent = true;
-        sendBeacon({ type: 'summary', history, lead, sessionId });
+        sendBeacon({ type: 'session_ended', conversation: history, lead, sessionId });
+      }
+    });
+    // Also catch unload event for extra safety
+    window.addEventListener('beforeunload', () => {
+      if (chatStarted && history.length > 0 && !summaryBeaconSent) {
+        summaryBeaconSent = true;
+        sendBeacon({ type: 'session_ended', conversation: history, lead, sessionId });
       }
     });
 
@@ -671,6 +679,13 @@
 
       saveSession();
       input.focus();
+      
+      // Send New Visitor notification to Discord
+      sendBeacon({
+        type: 'new_visitor',
+        lead: { name: lead.name, company: lead.company, email: lead.email, phone: lead.phone },
+        sessionId
+      });
 
     } catch (err) {
       console.error('Init error:', err);
@@ -722,7 +737,35 @@
         history.push({ role: 'assistant', content: data.reply });
       }
 
+      userTurns++;
       saveSession();
+
+      // Send First Message notification on first user message
+      if (!firstMessageSent && userTurns === 1) {
+        firstMessageSent = true;
+        setTimeout(() => {
+          sendBeacon({
+            type: 'first_message',
+            lead,
+            userMessage: text,
+            aiReply: data.reply || '',
+            conversation: history,
+            sessionId
+          });
+        }, 100);
+      }
+      // Send Conversation Update every 3 user turns
+      else if (userTurns % 3 === 0) {
+        setTimeout(() => {
+          sendBeacon({
+            type: 'conversation_update',
+            lead,
+            turn: userTurns,
+            conversation: history,
+            sessionId
+          });
+        }, 100);
+      }
 
     } catch (err) {
       removeTypingIndicator();
