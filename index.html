@@ -198,13 +198,8 @@
   </script>
 
   <!-- ============================================================
-     MESHTEQ CHAT WIDGET — v2
-     Paste this block just before </body> in your index.html
-
-     Changes from v1:
-     - Pre-chat form collects name, company, phone, email FIRST
-     - Discord fires immediately on form submit
-     - Email updated to sales@meshteq.com
+     MESHTEQ CHAT WIDGET — v3
+     Paste just before </body> in index.html
      ============================================================ -->
 
 <style>
@@ -303,7 +298,7 @@
 /* ── PRE-CHAT FORM ─────────────────────────────────────── */
 #mq-prechat {
   flex: 1; overflow-y: auto; padding: 20px 16px;
-  display: flex; flex-direction: column; gap: 0;
+  display: flex; flex-direction: column;
 }
 #mq-prechat::-webkit-scrollbar { width: 4px; }
 #mq-prechat::-webkit-scrollbar-thumb { background: var(--mq-border); border-radius: 2px; }
@@ -418,7 +413,6 @@
 #mq-send:hover { background: #5ea8ff; }
 #mq-send:active { transform: scale(0.92); }
 #mq-send:disabled { background: var(--mq-surface2); cursor: not-allowed; }
-#mq-send:disabled svg path { stroke: var(--mq-muted); }
 
 /* Footer */
 #mq-footer {
@@ -433,7 +427,7 @@
 
 <div id="mq-chat-root">
   <!-- Floating bubble -->
-  <button id="mq-bubble" aria-label="Chat with Meshteq" title="Chat with us">
+  <button id="mq-bubble" aria-label="Chat with Meshteq">
     <span id="mq-badge" aria-hidden="true">1</span>
 
     <svg class="mq-icon-chat" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -462,7 +456,7 @@
     <div id="mq-prechat">
       <div class="mq-prechat-intro">
         <strong>Before we chat</strong>
-        Please share a few details so our team can follow up with you.
+        Share a few details so our team can follow up with you.
       </div>
 
       <div class="mq-field">
@@ -480,7 +474,7 @@
         <div class="mq-field">
           <label for="mq-f-email">Email <span style="color:var(--mq-red)">*</span></label>
           <input type="email" id="mq-f-email" placeholder="you@company.com" autocomplete="email" />
-          <div class="mq-field-error" id="mq-err-email">Please enter a valid email</div>
+          <div class="mq-field-error" id="mq-err-email">Enter a valid email</div>
         </div>
         <div class="mq-field">
           <label for="mq-f-phone">Phone <span class="mq-optional">(optional)</span></label>
@@ -522,61 +516,56 @@
 
   // ── CONFIG ──────────────────────────────────────────────
   const WORKER_URL = 'https://meshteq-chat.radz-953.workers.dev';
-  const SESSION_KEY = 'mq_chat_v2';
+  const SESSION_KEY = 'mq_chat_v3';
   // ────────────────────────────────────────────────────────
 
   // State
-  let isOpen        = false;
-  let isTyping      = false;
-  let chatStarted   = false;
-  let history       = [];
-  let lead          = {};
-  let sessionId     = generateSessionId();
+  let isOpen = false, isTyping = false, chatStarted = false;
+  let history = [], lead = {}, sessionId = uid();
+  let summaryBeaconSent = false;
 
-  // Elements
-  const root        = document.getElementById('mq-chat-root');
-  const bubble      = document.getElementById('mq-bubble');
-  const badge       = document.getElementById('mq-badge');
-  const panel       = document.getElementById('mq-panel');
-  const prechat     = document.getElementById('mq-prechat');
-  const msgs        = document.getElementById('mq-messages');
-  const inputWrap   = document.getElementById('mq-input-wrap');
-  const input       = document.getElementById('mq-input');
-  const sendBtn     = document.getElementById('mq-send');
-  const submitBtn   = document.getElementById('mq-prechat-submit');
+  const $ = id => document.getElementById(id);
+  const root      = $('mq-chat-root');
+  const bubble    = $('mq-bubble');
+  const badge     = $('mq-badge');
+  const panel     = $('mq-panel');
+  const prechat   = $('mq-prechat');
+  const msgs      = $('mq-messages');
+  const inputWrap = $('mq-input-wrap');
+  const input     = $('mq-input');
+  const sendBtn   = $('mq-send');
+  const submitBtn = $('mq-prechat-submit');
+  const fName     = $('mq-f-name');
+  const fCompany  = $('mq-f-company');
+  const fEmail    = $('mq-f-email');
+  const fPhone    = $('mq-f-phone');
+  const errName   = $('mq-err-name');
+  const errEmail  = $('mq-err-email');
 
-  // Form fields
-  const fName       = document.getElementById('mq-f-name');
-  const fCompany    = document.getElementById('mq-f-company');
-  const fEmail      = document.getElementById('mq-f-email');
-  const fPhone      = document.getElementById('mq-f-phone');
-  const errName     = document.getElementById('mq-err-name');
-  const errEmail    = document.getElementById('mq-err-email');
-
-  // ── INIT ────────────────────────────────────────────────
+  // ── INIT ──────────────────────────────────────────────────
   function init() {
-    // Restore session
     try {
-      const saved = sessionStorage.getItem(SESSION_KEY);
-      if (saved) {
-        const session = JSON.parse(saved);
-        if (session.chatStarted) {
-          chatStarted = true;
-          lead        = session.lead  || {};
-          history     = session.history || [];
-          sessionId   = session.sessionId || sessionId;
-
-          // Restore UI to chat view
-          showChatView();
-          history.forEach(m => appendMessage(m.role === 'user' ? 'user' : 'bot', m.content, false));
-        }
+      const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '{}');
+      if (saved.chatStarted) {
+        chatStarted = true;
+        lead        = saved.lead     || {};
+        history     = saved.history  || [];
+        sessionId   = saved.sessionId || sessionId;
+        showChatView();
+        history.forEach(m => appendMessage(m.role === 'user' ? 'user' : 'bot', m.content, false));
       }
-    } catch (e) { /* start fresh */ }
+    } catch (e) {}
 
     // Show badge after 3s
-    if (!chatStarted) {
-      setTimeout(() => badge.classList.add('show'), 3000);
-    }
+    if (!chatStarted) setTimeout(() => badge.classList.add('show'), 3000);
+
+    // Send summary to Discord when visitor leaves
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && chatStarted && history.length > 0 && !summaryBeaconSent) {
+        summaryBeaconSent = true;
+        sendBeacon({ type: 'summary', history, lead, sessionId });
+      }
+    });
 
     bindEvents();
   }
@@ -640,7 +629,7 @@
     }
 
     const emailVal = fEmail.value.trim();
-    if (!emailVal || !isValidEmail(emailVal)) {
+    if (!emailVal || !validEmail(emailVal)) {
       fEmail.classList.add('error');
       errEmail.classList.add('show');
       valid = false;
@@ -688,12 +677,7 @@
       submitBtn.disabled = false;
       submitBtn.innerHTML = 'Start Chat <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-      // Show error in form area
-      const errDiv = document.createElement('div');
-      errDiv.style.cssText = 'color:var(--mq-red);font-size:0.75rem;margin-top:8px;text-align:center';
-      errDiv.textContent = 'Connection error. Please try again.';
-      submitBtn.after(errDiv);
-      setTimeout(() => errDiv.remove(), 4000);
+      showFormError('Connection error — please try again.');
     }
   }
 
@@ -742,25 +726,31 @@
 
     } catch (err) {
       removeTypingIndicator();
-      appendMessage('bot', "I'm having trouble connecting. Please try again or email us at **sales@meshteq.com**.");
+      appendMessage('bot', "I'm having trouble connecting. Please email **sales@meshteq.com** directly.");
       console.error('Chat error:', err);
     } finally {
       setLoading(false);
     }
   }
 
-  // ── UI HELPERS ───────────────────────────────────────────
+  // ── sendBeacon on page close ───────────────────────────────
+  function sendBeacon(payload) {
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    navigator.sendBeacon(WORKER_URL, blob);
+  }
+
+  // ── UI HELPERS ────────────────────────────────────────────
   function appendMessage(role, content, scroll = true) {
     const wrapper = document.createElement('div');
     wrapper.className = `mq-msg ${role}`;
 
     const bub = document.createElement('div');
     bub.className = 'mq-bubble';
-    bub.innerHTML = renderMarkdown(content);
+    bub.innerHTML = md(content);
 
     const time = document.createElement('div');
     time.className = 'mq-time';
-    time.textContent = formatTime(new Date());
+    time.textContent = fmt(new Date());
 
     wrapper.appendChild(bub);
     wrapper.appendChild(time);
@@ -770,34 +760,30 @@
 
   function showTypingIndicator() {
     if (msgs.querySelector('.mq-typing-msg')) return;
-    const wrapper = document.createElement('div');
-    wrapper.className = 'mq-msg bot mq-typing-msg';
+    const w = document.createElement('div');
+    w.className = 'mq-msg bot mq-typing-msg';
+    const b = document.createElement('div');
+    b.className = 'mq-bubble';
+    b.innerHTML = '<div class="mq-typing-dots"><span></span><span></span><span></span></div>';
+    w.appendChild(b); msgs.appendChild(w); scrollToBottom();
+  }
+  function removeTypingIndicator() { const el = msgs.querySelector('.mq-typing-msg'); if (el) el.remove(); }
+  function setLoading(v) { isTyping = v; sendBtn.disabled = v; input.disabled = v; }
+  function scrollToBottom() { requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
 
-    const bub = document.createElement('div');
-    bub.className = 'mq-bubble';
-    bub.innerHTML = '<div class="mq-typing-dots"><span></span><span></span><span></span></div>';
-    wrapper.appendChild(bub);
-    msgs.appendChild(wrapper);
-    scrollToBottom();
+  function showFormError(msg) {
+    const existing = prechat.querySelector('.mq-form-err');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.className = 'mq-form-err';
+    el.style.cssText = 'color:var(--mq-red);font-size:0.75rem;margin-top:8px;text-align:center';
+    el.textContent = msg;
+    submitBtn.after(el);
+    setTimeout(() => el.remove(), 4000);
   }
 
-  function removeTypingIndicator() {
-    const el = msgs.querySelector('.mq-typing-msg');
-    if (el) el.remove();
-  }
-
-  function setLoading(loading) {
-    isTyping = loading;
-    sendBtn.disabled = loading;
-    input.disabled = loading;
-  }
-
-  function scrollToBottom() {
-    requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; });
-  }
-
-  // ── MARKDOWN ─────────────────────────────────────────────
-  function renderMarkdown(text) {
+  // ── MARKDOWN ──────────────────────────────────────────────
+  function md(text) {
     if (!text) return '';
     return text
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -806,7 +792,7 @@
       .replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
         '<a href="mailto:$1" style="color:var(--mq-accent)">$1</a>')
       .replace(/(https?:\/\/[^\s]+)/g,
-        '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:var(--mq-accent)">$1</a>')
+        '<a href="$1" target="_blank" rel="noopener" style="color:var(--mq-accent)">$1</a>')
       .replace(/\n/g, '<br>');
   }
 
@@ -820,10 +806,10 @@
     } catch (e) { /* ignore */ }
   }
 
-  // ── UTILS ────────────────────────────────────────────────
-  function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); }
-  function formatTime(date) { return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  function generateSessionId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  // ── UTILS ─────────────────────────────────────────────────
+  function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+  function fmt(d) { return d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
   init();
 })();
