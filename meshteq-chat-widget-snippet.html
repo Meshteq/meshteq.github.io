@@ -276,19 +276,22 @@
 
     if (!chatStarted) setTimeout(() => badge.classList.add('show'), 3000);
 
-    // ── BEACON on page close (type: 'summary') ───────────────
-    // This is the ONLY beacon the widget sends.
-    // The worker handles this as type: 'summary' and posts 🔚 Session Ended to Discord.
+    // ── SUMMARY on page close or panel close ────────────────
+    // sendBeacon with application/json fails CORS preflight silently.
+    // fetch + keepalive:true is the correct replacement — survives unload,
+    // handles CORS, and works in all modern browsers.
     const sendSummary = () => {
       if (!chatStarted || history.length === 0 || beaconSent) return;
       beaconSent = true;
-      navigator.sendBeacon(
-        WORKER_URL,
-        new Blob([JSON.stringify({ type: 'summary', history, lead, sessionId })],
-                 { type: 'application/json' })
-      );
+      fetch(WORKER_URL, {
+        method:    'POST',
+        headers:   { 'Content-Type': 'application/json' },
+        body:      JSON.stringify({ type: 'summary', history, lead, sessionId }),
+        keepalive: true   // survives page unload
+      }).catch(() => {}); // fire and forget
     };
 
+    // Trigger 1: tab hidden or page closed
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') sendSummary();
     });
@@ -318,6 +321,7 @@
   }
 
   function togglePanel(forceState) {
+    const wasOpen = isOpen;
     isOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
     bubble.classList.toggle('open', isOpen);
     panel.classList.toggle('open', isOpen);
@@ -325,6 +329,10 @@
       badge.classList.remove('show');
       setTimeout(() => { chatStarted ? input.focus() : fName.focus(); }, 300);
       if (chatStarted) scrollToBottom();
+    }
+    // Trigger 2: panel closed after conversation — send summary immediately
+    if (wasOpen && !isOpen && chatStarted && history.length > 0) {
+      sendSummary();
     }
   }
 
