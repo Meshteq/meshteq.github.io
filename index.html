@@ -457,13 +457,13 @@
 
   // ── CONFIG ────────────────────────────────────────────────
   const WORKER_URL  = 'https://meshteq-chat.radz-953.workers.dev';
-  const SESSION_KEY = 'mq_chat_v4';
+  const SESSION_KEY = 'mq_chat_v5';
   // ─────────────────────────────────────────────────────────
 
   // State
-  let isOpen = false, isTyping = false, chatStarted = false, chatEnded = false;
+  let isOpen = false, isTyping = false, chatStarted = false, chatEnded = false, chatPaused = false;
   let history = [], lead = {}, sessionId = uid();
-  let beaconSent = false;
+  let lastSummarizedUserCount = 0;
   let sendSummary = () => {}; // hoisted — assigned in init()
 
   // Elements
@@ -490,11 +490,13 @@
     // Restore session
     try {
       const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '{}');
-      if (s.chatStarted) {
+      if (s.chatStarted && !s.chatEnded) {
         chatStarted = true;
-        lead        = s.lead      || {};
-        history     = s.history   || [];
-        sessionId   = s.sessionId || sessionId;
+        lead        = s.lead                    || {};
+        history     = s.history                 || [];
+        sessionId   = s.sessionId               || sessionId;
+        chatPaused  = s.chatPaused              || false;
+        lastSummarizedUserCount = s.lastSummarizedUserCount || 0;
         showChatView();
         history.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'bot', m.content, false));
       }
@@ -502,24 +504,23 @@
 
     if (!chatStarted) setTimeout(() => badge.classList.add('show'), 3000);
 
-    // ── SUMMARY on page close or panel close ────────────────
-    // sendBeacon with application/json fails CORS preflight silently.
-    // fetch + keepalive:true is the correct replacement — survives unload,
-    // handles CORS, and works in all modern browsers.
     sendSummary = () => {
-      if (!chatStarted || history.length === 0 || beaconSent) return;
+      if (!chatStarted || history.length === 0) return;
 
       const userQuestions = history
         .filter(m => m.role === 'user' && typeof m.content === 'string' && m.content.trim())
         .map(m => m.content.trim());
 
       if (userQuestions.length === 0) return;
+      if (userQuestions.length <= lastSummarizedUserCount) return;
 
       const botAnswers = history
         .filter(m => m.role === 'assistant' && typeof m.content === 'string' && m.content.trim())
         .map(m => m.content.trim());
 
-      beaconSent = true;
+      lastSummarizedUserCount = userQuestions.length;
+      saveSession();
+
       fetch(WORKER_URL, {
         method:    'POST',
         headers:   { 'Content-Type': 'application/json' },
@@ -531,15 +532,9 @@
           userQuestions,
           botAnswers
         }),
-        keepalive: true   // survives page unload
+        keepalive: true
       }).catch(() => {});
     };
-
-    // Trigger 1: tab hidden or page closed
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') sendSummary();
-    });
-    window.addEventListener('pagehide', sendSummary);
 
     bindEvents();
   }
@@ -559,31 +554,45 @@
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 100) + 'px';
     });
-    document.addEventListener('click', e => {
-      if (isOpen && !root.contains(e.target)) togglePanel(false);
-    });
   }
 
-  function togglePanel(forceState) {
+  function togglePanel(forceState, options = {}) {
     const wasOpen = isOpen;
+    const suppressSummary = !!options.suppressSummary;
+
     isOpen = typeof forceState === 'boolean' ? forceState : !isOpen;
     bubble.classList.toggle('open', isOpen);
     panel.classList.toggle('open', isOpen);
+
     if (isOpen) {
       badge.classList.remove('show');
-      setTimeout(() => { chatStarted ? input.focus() : fName.focus(); }, 300);
+      if (!chatStarted) {
+        setTimeout(() => fName.focus(), 300);
+      } else if (chatPaused && !chatEnded) {
+        showResumePrompt();
+      } else if (!chatEnded) {
+        input.readOnly = false;
+        sendBtn.disabled = false;
+        clearResumePrompt();
+        setTimeout(() => input.focus(), 300);
+      }
       if (chatStarted) scrollToBottom();
     }
-    // Trigger 2: panel closed after conversation — send summary immediately
-    if (wasOpen && !isOpen && chatStarted && history.length > 0) {
-      sendSummary();
+
+    if (wasOpen && !isOpen && chatStarted && !chatEnded) {
+      chatPaused = true;
+      input.readOnly = true;
+      sendBtn.disabled = true;
+      clearFollowups();
+      clearResumePrompt();
+      saveSession();
+      if (!suppressSummary) sendSummary();
     }
   }
 
   // ── PRE-CHAT FORM ────────────────────────────────────────
-  // Sends: POST { type: 'init', lead, sessionId }
-  // Worker: posts 🎯 New Visitor to Discord, returns personalised greeting
-  async function handleFormSubmit() {
+  // Local start only (no API call) to avoid any first-message Discord side effects.
+  function handleFormSubmit() {
     if (isTyping) return;
     let valid = true;
 
@@ -607,33 +616,19 @@
       phone:   fPhone.value.trim()   || null
     };
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Starting chat...';
+    chatStarted = true;
+    chatEnded = false;
+    chatPaused = false;
+    showChatView();
 
-    try {
-      const res  = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'init', lead, sessionId })
-      });
-      const data = await res.json();
-
-      chatStarted = true;
-      showChatView();
-      if (data.reply) {
-        appendMsg('bot', data.reply);
-        history.push({ role: 'assistant', content: data.reply });
-        showFollowup();
-      }
-      saveSession();
-      input.focus();
-
-    } catch (err) {
-      console.error('Init error:', err);
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Start Chat <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      showFormError('Connection error — please try again.');
-    }
+    const first = lead.name.split(' ')[0] || 'there';
+    const co = lead.company ? ` from ${lead.company}` : '';
+    const greeting = `Hi ${first}${co}! 👋 Thanks for reaching out — I'm Aiden, Meshteq's virtual assistant.\n\nHow can I help you today?`;
+    appendMsg('bot', greeting);
+    history.push({ role: 'assistant', content: greeting });
+    showFollowup();
+    saveSession();
+    input.focus();
   }
 
   function showChatView() {
@@ -709,15 +704,51 @@
     w.appendChild(b); msgs.appendChild(w); scrollToBottom();
   }
   function removeTyping()  { const el = msgs.querySelector('.mq-typing-msg'); if (el) el.remove(); }
-  function setLoading(v)   { isTyping = v; sendBtn.disabled = v; input.disabled = v; }
+  function setLoading(v)   { isTyping = v; sendBtn.disabled = v; input.readOnly = v; }
   function scrollToBottom(){ requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
 
   function clearFollowups() {
     msgs.querySelectorAll('.mq-followup-wrap').forEach(el => el.remove());
   }
 
-  function showFollowup() {
+  function clearResumePrompt() {
+    msgs.querySelectorAll('.mq-resume-wrap').forEach(el => el.remove());
+  }
+
+  function showResumePrompt() {
+    clearResumePrompt();
     clearFollowups();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'mq-msg bot mq-followup-wrap mq-resume-wrap';
+    wrap.innerHTML = '<div class="mq-followup"><span>Continue your previous chat?</span><div class="mq-followup-btns"><button type="button" class="mq-btn-more">Yes, continue</button><button type="button" class="mq-btn-end">No, close</button></div></div>';
+    msgs.appendChild(wrap);
+
+    input.readOnly = true;
+    sendBtn.disabled = true;
+
+    wrap.querySelector('.mq-btn-more').addEventListener('click', () => {
+      wrap.remove();
+      chatPaused = false;
+      input.readOnly = false;
+      sendBtn.disabled = false;
+      saveSession();
+      input.focus();
+      scrollToBottom();
+    });
+
+    wrap.querySelector('.mq-btn-end').addEventListener('click', () => {
+      wrap.remove();
+      togglePanel(false, { suppressSummary: true });
+    });
+
+    scrollToBottom();
+  }
+
+  function showFollowup() {
+    clearResumePrompt();
+    clearFollowups();
+
     const wrap = document.createElement('div');
     wrap.className = 'mq-msg bot mq-followup-wrap';
     wrap.innerHTML = '<div class="mq-followup"><span>Anything else?</span><div class="mq-followup-btns"><button type="button" class="mq-btn-more">Yes, continue</button><button type="button" class="mq-btn-end">End chat</button></div></div>';
@@ -741,11 +772,13 @@
   function endChat() {
     if (chatEnded) return;
     chatEnded = true;
+    chatPaused = false;
     clearFollowups();
+    clearResumePrompt();
     sendSummary();
     appendMsg('bot', 'Thank you for chatting with Meshteq. Our team will follow up shortly.');
     inputWrap.classList.add('mq-hidden');
-    saveSession();
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
     setTimeout(() => togglePanel(false), 1200);
   }
 
@@ -777,7 +810,13 @@
   function saveSession() {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        chatStarted, lead, sessionId, history: history.slice(-20)
+        chatStarted,
+        chatEnded,
+        chatPaused,
+        lead,
+        sessionId,
+        lastSummarizedUserCount,
+        history: history.slice(-20)
       }));
     } catch (e) {}
   }
