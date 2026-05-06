@@ -387,6 +387,7 @@
     const greeting = `Hi ${first}${co}! 👋 Thanks for reaching out — I'm Aiden, Meshteq's virtual assistant.\n\nHow can I help you today?`;
     appendMsg('bot', greeting);
     history.push({ role: 'assistant', content: greeting });
+    showFollowup();
     saveSession();
     input.focus();
   }
@@ -453,8 +454,14 @@
     const btnMore = document.createElement('button');
     btnMore.className = 'mq-btn-more';
     btnMore.textContent = 'Yes, continue';
+
+    input.readOnly = true;
+    sendBtn.disabled = true;
+
     btnMore.addEventListener('click', () => {
       removeFollowup();
+      input.readOnly = false;
+      sendBtn.disabled = false;
       input.focus();
     });
 
@@ -499,13 +506,30 @@
   // Fire-and-forget POST. Worker generates AI summary and posts
   // ONE Discord message. summarySent flag prevents duplicates.
   const sendSummary = () => {
-    const hasUserMessages = history.some(m => m.role === 'user');
-    if (!chatStarted || !hasUserMessages || summarySent) return;
+    if (!chatStarted || history.length === 0 || summarySent) return;
+
+    const userQuestions = history
+      .filter(m => m.role === 'user' && typeof m.content === 'string' && m.content.trim())
+      .map(m => m.content.trim());
+
+    if (userQuestions.length === 0) return;
+
+    const botAnswers = history
+      .filter(m => m.role === 'assistant' && typeof m.content === 'string' && m.content.trim())
+      .map(m => m.content.trim());
+
     summarySent = true;
     fetch(WORKER_URL, {
       method:    'POST',
       headers:   { 'Content-Type': 'application/json' },
-      body:      JSON.stringify({ type: 'summary', history, lead, sessionId }),
+      body:      JSON.stringify({
+        type: 'summary',
+        history,
+        lead,
+        sessionId,
+        userQuestions,
+        botAnswers
+      }),
       keepalive: true   // survives page unload
     }).catch(() => {});
   };
