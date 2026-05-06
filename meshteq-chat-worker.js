@@ -49,6 +49,15 @@ Do not include preamble or labels.`;
 export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
+    const url = new URL(request.url);
+
+    if (request.method === 'GET' && url.pathname === '/health') {
+      return cors(JSON.stringify({
+        ok: true,
+        service: 'meshteq-chat-worker',
+        timestamp: new Date().toISOString()
+      }), 200, origin);
+    }
 
     if (request.method === 'OPTIONS') return cors(null, 204, origin);
     if (request.method !== 'POST')    return cors(JSON.stringify({ error: 'Method not allowed' }), 405, origin);
@@ -174,7 +183,8 @@ export default {
       if (!oaiRes.ok) {
         console.error('OpenAI error:', oaiRes.status, await oaiRes.text());
         return cors(JSON.stringify({
-          reply: "I'm having trouble right now. Please email sales@meshteq.com."
+          reply: "I'm having trouble right now. Please email sales@meshteq.com.",
+          error: 'OPENAI_UNAVAILABLE'
         }), 200, origin);
       }
 
@@ -186,7 +196,8 @@ export default {
     } catch (err) {
       console.error('Worker error:', err);
       return cors(JSON.stringify({
-        reply: "Something went wrong. Please email sales@meshteq.com."
+        reply: "Something went wrong. Please email sales@meshteq.com.",
+        error: 'WORKER_ERROR'
       }), 200, origin);
     }
   }

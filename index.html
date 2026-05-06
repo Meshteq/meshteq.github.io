@@ -456,8 +456,9 @@
   'use strict';
 
   // ── CONFIG ────────────────────────────────────────────────
-  const WORKER_URL  = 'https://meshteq-chat.radz-953.workers.dev';
+  const WORKER_URL  = 'https://chat.meshteq.com';
   const SESSION_KEY = 'mq_chat_v5';
+  const REQUEST_TIMEOUT_MS = 12000;
   // ─────────────────────────────────────────────────────────
 
   // State
@@ -656,12 +657,12 @@
     showTyping();
 
     try {
-      const res  = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: history.slice(-12), lead, sessionId })
+      const data = await fetchWorkerJson({
+        message: text,
+        history: history.slice(-12),
+        lead,
+        sessionId
       });
-      const data = await res.json();
       removeTyping();
 
       history.push({ role: 'user', content: text });
@@ -675,7 +676,7 @@
     } catch (err) {
       removeTyping();
       history.push({ role: 'user', content: text });
-      appendMsg('bot', "I'm having trouble connecting right now. Please email **sales@meshteq.com** directly.");
+      appendMsg('bot', networkFailureMessage(err));
       showFollowup();
       console.error('Chat error:', err);
     } finally {
@@ -721,6 +722,56 @@
     input.readOnly = false;
   }
   function scrollToBottom(){ requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
+
+  async function fetchWorkerJson(payload) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      const raw = await res.text();
+      let data = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error('INVALID_JSON');
+        }
+      }
+
+      if (!res.ok) throw new Error(`HTTP_${res.status}`);
+      return data;
+    } catch (err) {
+      if (err && err.name === 'AbortError') throw new Error('TIMEOUT');
+      if (err instanceof TypeError) throw new Error('WORKER_UNREACHABLE');
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  function networkFailureMessage(err) {
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return "Your device appears to be offline. Please reconnect and try again, or email **sales@meshteq.com**.";
+    }
+
+    const code = String(err && err.message ? err.message : '');
+    const blockedOrTimedOut = [
+      'WORKER_UNREACHABLE', 'TIMEOUT', 'HTTP_522', 'HTTP_523',
+      'HTTP_524', 'HTTP_530', 'HTTP_502', 'HTTP_503', 'HTTP_504'
+    ];
+    if (blockedOrTimedOut.includes(code)) {
+      return "I can't reach the chat service from this network right now. Please try mobile data or another WiFi, or email **sales@meshteq.com** and we will assist immediately.";
+    }
+
+    return "I'm having trouble connecting right now. Please email **sales@meshteq.com** directly.";
+  }
 
   function clearFollowups() {
     msgs.querySelectorAll('.mq-followup-wrap').forEach(el => el.remove());
