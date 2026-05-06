@@ -496,11 +496,11 @@
         lead        = s.lead                    || {};
         history     = s.history                 || [];
         sessionId   = s.sessionId               || sessionId;
-        chatPaused  = true; // always show resume prompt when returning to a previous session
+        chatPaused  = s.chatPaused              || false;
         lastSummarizedUserCount = s.lastSummarizedUserCount || 0;
         showChatView();
-        input.readOnly = true;
-        sendBtn.disabled = true;
+        input.readOnly = chatPaused;
+        sendBtn.disabled = chatPaused;
         history.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'bot', m.content, false));
       }
     } catch (e) {}
@@ -708,7 +708,18 @@
     w.appendChild(b); msgs.appendChild(w); scrollToBottom();
   }
   function removeTyping()  { const el = msgs.querySelector('.mq-typing-msg'); if (el) el.remove(); }
-  function setLoading(v)   { isTyping = v; sendBtn.disabled = v; input.readOnly = v; }
+  function setLoading(v)   {
+    isTyping = v;
+    if (v) {
+      sendBtn.disabled = true;
+      input.readOnly = true;
+      return;
+    }
+    // Keep the input locked while a confirmation prompt is active or after chat end.
+    if (awaitingConfirm || chatEnded) return;
+    sendBtn.disabled = false;
+    input.readOnly = false;
+  }
   function scrollToBottom(){ requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
 
   function clearFollowups() {
