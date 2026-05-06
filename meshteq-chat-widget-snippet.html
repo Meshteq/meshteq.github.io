@@ -1,11 +1,15 @@
 <!-- ============================================================
-     MESHTEQ CHAT WIDGET — v4
+     MESHTEQ CHAT WIDGET — v5
      Paste just before </body> in index.html
 
-     Widget sends exactly 3 request types to the worker:
-       init    → form submitted (Discord: 🎯 New Visitor)
-       [chat]  → each message (Discord: 💬 after turn 1 + every 3 turns)
-       summary → page close via sendBeacon (Discord: 🔚 Session Ended)
+     Flow:
+       1. Visitor fills form → lead stored locally, greeting shown instantly (no API call)
+       2. Each message → POST to worker → OpenAI reply
+       3. After each bot reply → "Anything else?" buttons appear
+          · "Yes, continue" → dismiss buttons, focus input
+          · "End chat"      → send ONE summary to worker → Discord → close widget
+       4. Widget X close or tab close → also triggers summary (safety net)
+          summarySent flag ensures Discord is only posted once.
      ============================================================ -->
 
 <style>
@@ -126,6 +130,30 @@
 .mq-typing-dots span:nth-child(3){animation-delay:0.36s;}
 @keyframes mqBounce{0%,60%,100%{transform:translateY(0);opacity:0.5;}30%{transform:translateY(-5px);opacity:1;}}
 
+/* Follow-up confirmation */
+.mq-followup {
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding:10px 14px;background:var(--mq-surface2);
+  border-radius:10px;border:1px solid var(--mq-border);
+  animation:mqFadeUp 0.25s ease-out both;
+}
+.mq-followup-text { font-size:0.76rem;color:var(--mq-muted);text-align:center; }
+.mq-followup-btns { display:flex;gap:8px; }
+.mq-btn-more {
+  padding:5px 14px;border-radius:6px;border:1px solid var(--mq-accent);
+  background:transparent;color:var(--mq-accent);
+  font-family:inherit;font-size:0.74rem;font-weight:600;cursor:pointer;
+  transition:background 0.2s,color 0.2s;
+}
+.mq-btn-more:hover { background:var(--mq-accent);color:#fff; }
+.mq-btn-end {
+  padding:5px 14px;border-radius:6px;border:1px solid var(--mq-border);
+  background:transparent;color:var(--mq-muted);
+  font-family:inherit;font-size:0.74rem;font-weight:600;cursor:pointer;
+  transition:border-color 0.2s,color 0.2s;
+}
+.mq-btn-end:hover { border-color:var(--mq-red);color:var(--mq-red); }
+
 /* Input */
 #mq-input-wrap {
   padding:12px 14px;border-top:1px solid var(--mq-border);background:var(--mq-surface);
@@ -232,13 +260,13 @@
 
   // ── CONFIG ────────────────────────────────────────────────
   const WORKER_URL  = 'https://meshteq-chat.radz-953.workers.dev';
-  const SESSION_KEY = 'mq_chat_v4';
+  const SESSION_KEY = 'mq_chat_v5';
   // ─────────────────────────────────────────────────────────
 
   // State
-  let isOpen = false, isTyping = false, chatStarted = false;
+  let isOpen = false, isTyping = false, chatStarted = false, chatEnded = false;
   let history = [], lead = {}, sessionId = uid();
-  let beaconSent = false;
+  let summarySent = false;
 
   // Elements
   const $ = id => document.getElementById(id);
@@ -261,37 +289,23 @@
 
   // ── INIT ─────────────────────────────────────────────────
   function init() {
-    // Restore session
+    // Restore session if returning visitor
     try {
       const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '{}');
-      if (s.chatStarted) {
+      if (s.chatStarted && !s.chatEnded) {
         chatStarted = true;
         lead        = s.lead      || {};
         history     = s.history   || [];
         sessionId   = s.sessionId || sessionId;
         showChatView();
         history.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'bot', m.content, false));
+        scrollToBottom();
       }
     } catch (e) {}
 
     if (!chatStarted) setTimeout(() => badge.classList.add('show'), 3000);
 
-    // ── SUMMARY on page close or panel close ────────────────
-    // sendBeacon with application/json fails CORS preflight silently.
-    // fetch + keepalive:true is the correct replacement — survives unload,
-    // handles CORS, and works in all modern browsers.
-    const sendSummary = () => {
-      if (!chatStarted || history.length === 0 || beaconSent) return;
-      beaconSent = true;
-      fetch(WORKER_URL, {
-        method:    'POST',
-        headers:   { 'Content-Type': 'application/json' },
-        body:      JSON.stringify({ type: 'summary', history, lead, sessionId }),
-        keepalive: true   // survives page unload
-      }).catch(() => {}); // fire and forget
-    };
-
-    // Trigger 1: tab hidden or page closed
+    // Summary on page close — safety net for users who close tab without ending chat
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') sendSummary();
     });
@@ -315,8 +329,9 @@
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 100) + 'px';
     });
+    // Close panel on outside click — guard with isTyping to prevent accidental close
     document.addEventListener('click', e => {
-      if (isOpen && !root.contains(e.target)) togglePanel(false);
+      if (isOpen && !isTyping && !root.contains(e.target)) togglePanel(false);
     });
   }
 
@@ -327,19 +342,19 @@
     panel.classList.toggle('open', isOpen);
     if (isOpen) {
       badge.classList.remove('show');
-      setTimeout(() => { chatStarted ? input.focus() : fName.focus(); }, 300);
+      setTimeout(() => { chatStarted && !chatEnded ? input.focus() : !chatStarted ? fName.focus() : null; }, 300);
       if (chatStarted) scrollToBottom();
     }
-    // Trigger 2: panel closed after conversation — send summary immediately
-    if (wasOpen && !isOpen && chatStarted && history.length > 0) {
+    // Panel closed by X button mid-conversation — send summary as safety net
+    if (wasOpen && !isOpen && chatStarted && !chatEnded) {
       sendSummary();
     }
   }
 
   // ── PRE-CHAT FORM ────────────────────────────────────────
-  // Sends: POST { type: 'init', lead, sessionId }
-  // Worker: posts 🎯 New Visitor to Discord, returns personalised greeting
-  async function handleFormSubmit() {
+  // No API call on form submit — greeting is generated locally.
+  // This makes the chat open instantly and saves an OpenAI call.
+  function handleFormSubmit() {
     if (isTyping) return;
     let valid = true;
 
@@ -363,32 +378,17 @@
       phone:   fPhone.value.trim()   || null
     };
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Starting chat...';
+    chatStarted = true;
+    showChatView();
 
-    try {
-      const res  = await fetch(WORKER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'init', lead, sessionId })
-      });
-      const data = await res.json();
-
-      chatStarted = true;
-      showChatView();
-      if (data.reply) {
-        appendMsg('bot', data.reply);
-        history.push({ role: 'assistant', content: data.reply });
-      }
-      saveSession();
-      input.focus();
-
-    } catch (err) {
-      console.error('Init error:', err);
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Start Chat <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      showFormError('Connection error — please try again.');
-    }
+    // Local greeting — instant, no API call
+    const first   = lead.name.split(' ')[0] || 'there';
+    const co      = lead.company ? ` from ${lead.company}` : '';
+    const greeting = `Hi ${first}${co}! 👋 Thanks for reaching out — I'm Aiden, Meshteq's virtual assistant.\n\nHow can I help you today?`;
+    appendMsg('bot', greeting);
+    history.push({ role: 'assistant', content: greeting });
+    saveSession();
+    input.focus();
   }
 
   function showChatView() {
@@ -398,43 +398,117 @@
   }
 
   // ── CHAT ─────────────────────────────────────────────────
-  // Sends: POST { message, history, lead, sessionId }
-  // Worker: calls OpenAI, posts 💬 to Discord after turn 1 + every 3 turns
   async function handleSend() {
     const text = input.value.trim();
-    if (!text || isTyping) return;
+    if (!text || isTyping || chatEnded) return;
 
+    removeFollowup();
     input.value = '';
     input.style.height = 'auto';
     appendMsg('user', text);
+    history.push({ role: 'user', content: text });
     setLoading(true);
     showTyping();
 
     try {
       const res  = await fetch(WORKER_URL, {
-        method: 'POST',
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: history.slice(-12), lead, sessionId })
+        body:    JSON.stringify({ message: text, history: history.slice(-12), lead, sessionId })
       });
       const data = await res.json();
       removeTyping();
 
-      history.push({ role: 'user', content: text });
       if (data.reply) {
         appendMsg('bot', data.reply);
         history.push({ role: 'assistant', content: data.reply });
       }
       saveSession();
+      showFollowup();
 
     } catch (err) {
       removeTyping();
-      history.push({ role: 'user', content: text });
       appendMsg('bot', "I'm having trouble connecting right now. Please email **sales@meshteq.com** directly.");
       console.error('Chat error:', err);
+      showFollowup();
     } finally {
       setLoading(false);
     }
   }
+
+  // ── FOLLOW-UP CONFIRMATION ───────────────────────────────
+  // Shown after every bot reply. User either continues or ends the chat.
+  function showFollowup() {
+    removeFollowup();
+    const div = document.createElement('div');
+    div.className = 'mq-followup';
+
+    const text = document.createElement('span');
+    text.className = 'mq-followup-text';
+    text.textContent = 'Anything else I can help with?';
+
+    const btns = document.createElement('div');
+    btns.className = 'mq-followup-btns';
+
+    const btnMore = document.createElement('button');
+    btnMore.className = 'mq-btn-more';
+    btnMore.textContent = 'Yes, continue';
+    btnMore.addEventListener('click', () => {
+      removeFollowup();
+      input.focus();
+    });
+
+    const btnEnd = document.createElement('button');
+    btnEnd.className = 'mq-btn-end';
+    btnEnd.textContent = 'End chat';
+    btnEnd.addEventListener('click', () => endChat());
+
+    btns.appendChild(btnMore);
+    btns.appendChild(btnEnd);
+    div.appendChild(text);
+    div.appendChild(btns);
+    msgs.appendChild(div);
+    scrollToBottom();
+  }
+
+  function removeFollowup() {
+    const el = msgs.querySelector('.mq-followup');
+    if (el) el.remove();
+  }
+
+  // ── END CHAT ─────────────────────────────────────────────
+  // Called when visitor clicks "End chat". Sends summary, shows
+  // thank-you, hides input, closes widget after a brief pause.
+  function endChat() {
+    if (chatEnded) return;
+    chatEnded = true;
+    removeFollowup();
+    sendSummary();
+
+    const emailRef = lead.email ? `**${lead.email}**` : 'your email address';
+    appendMsg('bot', `Thanks for chatting! 👋 Our team will follow up with you at ${emailRef}. Have a great day!`);
+    inputWrap.classList.add('mq-hidden');
+
+    // Clear session — next visit starts fresh
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+
+    setTimeout(() => togglePanel(false), 2500);
+  }
+
+  // ── SUMMARY ──────────────────────────────────────────────
+  // Fire-and-forget POST. Worker generates AI summary and posts
+  // ONE Discord message. summarySent flag prevents duplicates.
+  const sendSummary = () => {
+    const hasUserMessages = history.some(m => m.role === 'user');
+    if (!chatStarted || !hasUserMessages || summarySent) return;
+    summarySent = true;
+    fetch(WORKER_URL, {
+      method:    'POST',
+      headers:   { 'Content-Type': 'application/json' },
+      body:      JSON.stringify({ type: 'summary', history, lead, sessionId }),
+      keepalive: true   // survives page unload
+    }).catch(() => {});
+  };
 
   // ── UI ───────────────────────────────────────────────────
   function appendMsg(role, content, scroll = true) {
@@ -461,7 +535,7 @@
     w.appendChild(b); msgs.appendChild(w); scrollToBottom();
   }
   function removeTyping()  { const el = msgs.querySelector('.mq-typing-msg'); if (el) el.remove(); }
-  function setLoading(v)   { isTyping = v; sendBtn.disabled = v; input.disabled = v; }
+  function setLoading(v)   { isTyping = v; sendBtn.disabled = v; input.readOnly = v; }
   function scrollToBottom(){ requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight; }); }
 
   function showFormError(msg) {
@@ -492,7 +566,7 @@
   function saveSession() {
     try {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        chatStarted, lead, sessionId, history: history.slice(-20)
+        chatStarted, chatEnded, lead, sessionId, history: history.slice(-20)
       }));
     } catch (e) {}
   }

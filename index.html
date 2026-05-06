@@ -198,13 +198,17 @@
   </script>
 
   <!-- ============================================================
-     MESHTEQ CHAT WIDGET — v4
+     MESHTEQ CHAT WIDGET — v5
      Paste just before </body> in index.html
 
-     Widget sends exactly 3 request types to the worker:
-       init    → form submitted (Discord: 🎯 New Visitor)
-       [chat]  → each message (Discord: 💬 after turn 1 + every 3 turns)
-       summary → page close via sendBeacon (Discord: 🔚 Session Ended)
+     Flow:
+       1. Visitor fills form → lead stored locally, greeting shown instantly (no API call)
+       2. Each message → POST to worker → OpenAI reply
+       3. After each bot reply → "Anything else?" buttons appear
+          · "Yes, continue" → dismiss buttons, focus input
+          · "End chat"      → send ONE summary to worker → Discord → close widget
+       4. Widget X close or tab close → also triggers summary (safety net)
+          summarySent flag ensures Discord is only posted once.
      ============================================================ -->
 
 <style>
