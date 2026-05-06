@@ -791,16 +791,17 @@
 
   function endChat() {
     if (chatEnded) return;
-    chatEnded = true;
-    chatPaused = false;
+    chatEnded = false;
+    chatPaused = true;
     awaitingConfirm = false;
     clearFollowups();
     clearResumePrompt();
     sendSummary();
     appendMsg('bot', 'Thank you for chatting with Meshteq. Our team will follow up shortly.');
-    inputWrap.classList.add('mq-hidden');
-    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
-    // Close panel — mark isOpen=false first so togglePanel doesn't fire sendSummary again
+    input.readOnly = true;
+    sendBtn.disabled = true;
+    saveSession();
+    // Close panel while preserving paused session so reopen shows resume prompt.
     isOpen = true;
     setTimeout(() => togglePanel(false, { suppressSummary: true }), 1500);
   }
