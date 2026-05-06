@@ -492,21 +492,32 @@
     // fetch + keepalive:true is the correct replacement — survives unload,
     // handles CORS, and works in all modern browsers.
     sendSummary = () => {
-      console.log('[MQ] sendSummary called:', { chatStarted, historyLen: history.length, beaconSent });
-      if (!chatStarted || history.length === 0 || beaconSent) {
-        console.log('[MQ] sendSummary aborted — conditions not met');
-        return;
-      }
+      if (!chatStarted || history.length === 0 || beaconSent) return;
+
+      const userQuestions = history
+        .filter(m => m.role === 'user' && typeof m.content === 'string' && m.content.trim())
+        .map(m => m.content.trim());
+
+      if (userQuestions.length === 0) return;
+
+      const botAnswers = history
+        .filter(m => m.role === 'assistant' && typeof m.content === 'string' && m.content.trim())
+        .map(m => m.content.trim());
+
       beaconSent = true;
-      console.log('[MQ] Sending summary to worker...', { sessionId, leadName: lead?.name });
       fetch(WORKER_URL, {
         method:    'POST',
         headers:   { 'Content-Type': 'application/json' },
-        body:      JSON.stringify({ type: 'summary', history, lead, sessionId }),
+        body:      JSON.stringify({
+          type: 'summary',
+          history,
+          lead,
+          sessionId,
+          userQuestions,
+          botAnswers
+        }),
         keepalive: true   // survives page unload
-      })
-        .then(r => console.log('[MQ] Summary response:', r.status, r.ok))
-        .catch(e => console.error('[MQ] Summary failed:', e));
+      }).catch(() => {});
     };
 
     // Trigger 1: tab hidden or page closed

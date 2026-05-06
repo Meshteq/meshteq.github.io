@@ -40,12 +40,10 @@ Malaysian technology company specialising in Industrial IoT and AI SaaS. We conn
 - If visitor is ready to move forward, confirm that sales@meshteq.com will follow up.`;
 }
 
-const SUMMARY_SYSTEM = `Summarise this website chat in ONE sentence (max 20 words).
-Focus on what the visitor wants or is interested in.
-Examples:
-- "Interested in PrimeTune.ai for equipment monitoring at an oil and gas site"
-- "Looking for LoRaWAN gateway deployment and sensor integration services"
-Reply with the summary only — no preamble, no full stop.`;
+const BOT_SUMMARY_SYSTEM = `Summarise what Aiden told the visitor in this chat.
+Return one short paragraph in plain language (max 45 words).
+Do not list point-by-point answers.
+Do not include preamble or labels.`;
 
 // ============================================================
 export default {
@@ -62,7 +60,15 @@ export default {
       return cors(JSON.stringify({ error: 'Invalid JSON' }), 400, origin);
     }
 
-    const { type, message, history = [], lead = {}, sessionId = '' } = body;
+    const {
+      type,
+      message,
+      history = [],
+      lead = {},
+      sessionId = '',
+      userQuestions = [],
+      botAnswers = []
+    } = body;
 
     try {
 
@@ -71,33 +77,47 @@ export default {
       // Sends ONE Discord embed: lead + visitor questions + AI summary.
       // Bot replies are intentionally excluded.
       if (type === 'summary') {
-        const userMessages = Array.isArray(history)
-          ? history.filter(m => m.role === 'user')
-          : [];
+        const questionSource = Array.isArray(userQuestions) && userQuestions.length > 0
+          ? userQuestions.map(q => String(q || '').trim()).filter(Boolean)
+          : (Array.isArray(history)
+              ? history
+                  .filter(m => m.role === 'user' && typeof m.content === 'string')
+                  .map(m => m.content.trim())
+                  .filter(Boolean)
+              : []);
 
-        if (userMessages.length === 0) {
+        if (questionSource.length === 0) {
           return cors(JSON.stringify({ ok: true }), 200, origin);
         }
 
         // Numbered question list — stays within Discord 1024 char field limit
         let questionsText = '';
-        for (let i = 0; i < userMessages.length; i++) {
-          const line = `${i + 1}. ${userMessages[i].content.trim()}`;
+        for (let i = 0; i < questionSource.length; i++) {
+          const line = `${i + 1}. ${questionSource[i]}`;
           const candidate = questionsText ? `${questionsText}\n${line}` : line;
           if (candidate.length > 980) {
-            const remaining = userMessages.length - i;
+            const remaining = questionSource.length - i;
             questionsText += `\n_...${remaining} more question${remaining > 1 ? 's' : ''} not shown_`;
             break;
           }
           questionsText = candidate;
         }
 
-        // AI summary of the full conversation
-        let summary = 'Summary unavailable';
+        // One combined summary of Aiden's guidance (not per-question answers)
+        const answerSource = Array.isArray(botAnswers) && botAnswers.length > 0
+          ? botAnswers.map(a => String(a || '').trim()).filter(Boolean)
+          : (Array.isArray(history)
+              ? history
+                  .filter(m => m.role === 'assistant' && typeof m.content === 'string')
+                  .map(m => m.content.trim())
+                  .filter(Boolean)
+              : []);
+
+        let answerSummary = 'Aiden provided guidance during the chat.';
         try {
-          summary = await aiSummary(env.OPENAI_API_KEY, history);
+          answerSummary = await aiBotSummary(env.OPENAI_API_KEY, answerSource);
         } catch (e) {
-          console.error('aiSummary failed:', e);
+          console.error('aiBotSummary failed:', e);
         }
 
         await discord(env.DISCORD_WEBHOOK_URL, {
@@ -108,13 +128,13 @@ export default {
           sessionId,
           fields: [
             {
-              name:   '💡  What They Want',
-              value:  summary.slice(0, 1000) || '—',
+              name:   `❓  Questions Asked (${questionSource.length})`,
+              value:  questionsText.trim() || '—',
               inline: false
             },
             {
-              name:   `❓  Questions Asked (${userMessages.length})`,
-              value:  questionsText.trim() || '—',
+              name:   '🤖  Aiden Answer Summary',
+              value:  answerSummary.slice(0, 1000) || '—',
               inline: false
             }
           ]
@@ -173,11 +193,10 @@ export default {
 };
 
 // ── AI summary ───────────────────────────────────────────────
-async function aiSummary(apiKey, history) {
-  const text = history
-    .slice(-10)
-    .map(m => `${m.role === 'user' ? 'Visitor' : 'Aiden'}: ${m.content}`)
-    .join('\n');
+async function aiBotSummary(apiKey, answers) {
+  const text = Array.isArray(answers) && answers.length > 0
+    ? answers.slice(-8).map((a, i) => `${i + 1}. ${a}`).join('\n')
+    : 'No assistant answers captured.';
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method:  'POST',
@@ -188,7 +207,7 @@ async function aiSummary(apiKey, history) {
     body: JSON.stringify({
       model:    'gpt-4o-mini',
       messages: [
-        { role: 'system', content: SUMMARY_SYSTEM },
+        { role: 'system', content: BOT_SUMMARY_SYSTEM },
         { role: 'user',   content: text }
       ],
       max_tokens:  60,
@@ -197,7 +216,7 @@ async function aiSummary(apiKey, history) {
   });
 
   const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || 'Interest not yet determined';
+  return data.choices?.[0]?.message?.content?.trim() || 'Aiden provided guidance during the chat.';
 }
 
 // ── Discord embed ─────────────────────────────────────────────
