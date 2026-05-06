@@ -462,6 +462,7 @@
 
   // State
   let isOpen = false, isTyping = false, chatStarted = false, chatEnded = false, chatPaused = false;
+  let awaitingConfirm = false; // true while a followup/resume prompt is shown — blocks handleSend
   let history = [], lead = {}, sessionId = uid();
   let lastSummarizedUserCount = 0;
   let sendSummary = () => {}; // hoisted — assigned in init()
@@ -495,9 +496,11 @@
         lead        = s.lead                    || {};
         history     = s.history                 || [];
         sessionId   = s.sessionId               || sessionId;
-        chatPaused  = s.chatPaused              || false;
+        chatPaused  = true; // always show resume prompt when returning to a previous session
         lastSummarizedUserCount = s.lastSummarizedUserCount || 0;
         showChatView();
+        input.readOnly = true;
+        sendBtn.disabled = true;
         history.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'bot', m.content, false));
       }
     } catch (e) {}
@@ -581,6 +584,7 @@
 
     if (wasOpen && !isOpen && chatStarted && !chatEnded) {
       chatPaused = true;
+      awaitingConfirm = false;
       input.readOnly = true;
       sendBtn.disabled = true;
       clearFollowups();
@@ -642,7 +646,7 @@
   // Worker: calls OpenAI, posts 💬 to Discord after turn 1 + every 3 turns
   async function handleSend() {
     const text = input.value.trim();
-    if (!text || isTyping || chatEnded) return;
+    if (!text || isTyping || chatEnded || awaitingConfirm) return;
 
     clearFollowups();
     input.value = '';
@@ -718,18 +722,19 @@
   function showResumePrompt() {
     clearResumePrompt();
     clearFollowups();
+    awaitingConfirm = true;
+    input.readOnly = true;
+    sendBtn.disabled = true;
 
     const wrap = document.createElement('div');
     wrap.className = 'mq-msg bot mq-followup-wrap mq-resume-wrap';
     wrap.innerHTML = '<div class="mq-followup"><span>Continue your previous chat?</span><div class="mq-followup-btns"><button type="button" class="mq-btn-more">Yes, continue</button><button type="button" class="mq-btn-end">No, close</button></div></div>';
     msgs.appendChild(wrap);
 
-    input.readOnly = true;
-    sendBtn.disabled = true;
-
     wrap.querySelector('.mq-btn-more').addEventListener('click', () => {
       wrap.remove();
       chatPaused = false;
+      awaitingConfirm = false;
       input.readOnly = false;
       sendBtn.disabled = false;
       saveSession();
@@ -739,6 +744,9 @@
 
     wrap.querySelector('.mq-btn-end').addEventListener('click', () => {
       wrap.remove();
+      awaitingConfirm = false;
+      chatPaused = false;
+      isOpen = true; // prevent togglePanel from re-triggering summary
       togglePanel(false, { suppressSummary: true });
     });
 
@@ -748,17 +756,18 @@
   function showFollowup() {
     clearResumePrompt();
     clearFollowups();
+    awaitingConfirm = true;
+    input.readOnly = true;
+    sendBtn.disabled = true;
 
     const wrap = document.createElement('div');
     wrap.className = 'mq-msg bot mq-followup-wrap';
     wrap.innerHTML = '<div class="mq-followup"><span>Anything else?</span><div class="mq-followup-btns"><button type="button" class="mq-btn-more">Yes, continue</button><button type="button" class="mq-btn-end">End chat</button></div></div>';
     msgs.appendChild(wrap);
 
-    input.readOnly = true;
-    sendBtn.disabled = true;
-
     wrap.querySelector('.mq-btn-more').addEventListener('click', () => {
       wrap.remove();
+      awaitingConfirm = false;
       input.readOnly = false;
       sendBtn.disabled = false;
       input.focus();
@@ -773,13 +782,16 @@
     if (chatEnded) return;
     chatEnded = true;
     chatPaused = false;
+    awaitingConfirm = false;
     clearFollowups();
     clearResumePrompt();
     sendSummary();
     appendMsg('bot', 'Thank you for chatting with Meshteq. Our team will follow up shortly.');
     inputWrap.classList.add('mq-hidden');
     try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
-    setTimeout(() => togglePanel(false), 1200);
+    // Close panel — mark isOpen=false first so togglePanel doesn't fire sendSummary again
+    isOpen = true;
+    setTimeout(() => togglePanel(false, { suppressSummary: true }), 1500);
   }
 
   function showFormError(msg) {
