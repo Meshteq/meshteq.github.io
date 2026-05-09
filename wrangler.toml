@@ -1,0 +1,7 @@
+name = "meshteq-chat"
+main = "meshteq-chat-worker.js"
+compatibility_date = "2026-05-09"
+
+kv_namespaces = [
+  { binding = "RATE_LIMIT", id = "c2e35be4903947d8b64dc0eaba5b6ac9" }
+]

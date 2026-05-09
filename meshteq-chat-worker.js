@@ -6,6 +6,9 @@
 //   OPENAI_API_KEY      — OpenAI API key
 //   DISCORD_WEBHOOK_URL — Discord webhook for #website-chat
 //
+// Required KV Binding:
+//   RATE_LIMIT          — KV namespace bound as 'RATE_LIMIT'
+//
 // Request types handled:
 //   chat (no type field) → call OpenAI, return reply. No Discord.
 //   summary              → visitor ended chat. ONE Discord message:
@@ -14,6 +17,20 @@
 // ============================================================
 
 const ALLOWED_ORIGIN = 'https://meshteq.com';
+
+// ── RATE LIMITING ─────────────────────────────────────────────
+const RATE_LIMIT_REQUESTS = 20;  // max requests per window
+const RATE_LIMIT_WINDOW_S = 60;  // rolling window in seconds
+
+async function checkRateLimit(kv, ip) {
+  if (!kv) return false; // if binding missing, fail open
+  const key = `rl:${ip}`;
+  const raw = await kv.get(key);
+  const count = raw ? parseInt(raw, 10) : 0;
+  if (count >= RATE_LIMIT_REQUESTS) return true; // blocked
+  await kv.put(key, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_S });
+  return false;
+}
 
 function buildSystemPrompt(lead) {
   const ctx = lead?.name
@@ -61,6 +78,13 @@ export default {
 
     if (request.method === 'OPTIONS') return cors(null, 204, origin);
     if (request.method !== 'POST')    return cors(JSON.stringify({ error: 'Method not allowed' }), 405, origin);
+
+    // ── Rate limiting ──────────────────────────────────────────
+    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const limited = await checkRateLimit(env.RATE_LIMIT, ip);
+    if (limited) {
+      return cors(JSON.stringify({ reply: "You've sent too many messages. Please wait a moment before trying again." }), 429, origin);
+    }
 
     let body;
     try {
@@ -183,8 +207,7 @@ export default {
       if (!oaiRes.ok) {
         console.error('OpenAI error:', oaiRes.status, await oaiRes.text());
         return cors(JSON.stringify({
-          reply: "I'm having trouble right now. Please email sales@meshteq.com.",
-          error: 'OPENAI_UNAVAILABLE'
+          reply: "I'm having trouble right now. Please email sales@meshteq.com."
         }), 200, origin);
       }
 
@@ -196,8 +219,7 @@ export default {
     } catch (err) {
       console.error('Worker error:', err);
       return cors(JSON.stringify({
-        reply: "Something went wrong. Please email sales@meshteq.com.",
-        error: 'WORKER_ERROR'
+        reply: "Something went wrong. Please email sales@meshteq.com."
       }), 200, origin);
     }
   }
@@ -265,9 +287,7 @@ async function discord(webhookUrl, { title, desc, color, lead, sessionId, fields
 
 // ── CORS ─────────────────────────────────────────────────────
 function cors(body, status, origin) {
-  const allow = origin === ALLOWED_ORIGIN
-    ? ALLOWED_ORIGIN
-    : (origin.includes('localhost') ? origin : ALLOWED_ORIGIN);
+  const allow = ALLOWED_ORIGIN;
 
   return new Response(body, {
     status,
