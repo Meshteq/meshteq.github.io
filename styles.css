@@ -845,3 +845,61 @@ a:hover{
   }
 
 }
+
+
+/* ── 8. MICC showcase (full-width flagship block) ── */
+
+.family-full{
+  padding:48px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.family-full .fam-head{
+  max-width:780px;
+  margin-bottom:26px;
+}
+
+.shot-frame{
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 18px 44px rgba(2,6,23,.18);
+  background:#020617;
+}
+
+.shot-frame .shot-bar{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:10px 14px;
+  background:#0f172a;
+  border-bottom:1px solid #1e293b;
+}
+
+.shot-frame .shot-bar i{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.shot-frame img{
+  display:block;
+  width:100%;
+  height:auto;
+}
+
+.sub-strip{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:14px;
+  margin-top:22px;
+}
+
+@media(max-width:900px){
+  .sub-strip{ grid-template-columns:repeat(2,1fr); }
+}
+
+@media(max-width:560px){
+  .sub-strip{ grid-template-columns:1fr; }
+}
