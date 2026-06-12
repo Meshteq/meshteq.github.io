@@ -50,6 +50,7 @@
       </a>
       <nav class="nav">
         <a href="#about">About</a>
+        <a href="/products.html">Products</a>
         <a href="#solutions">Solutions</a>
         <a href="/pricing.html">NaaS Packages</a>
         <a href="#why">Why Us</a>
@@ -91,6 +92,39 @@
             <li><strong>Use Cases:</strong> Smart Water, O&amp;G, Industrial IoT, Logistics, Agriculture</li>
           </ul>
           <p class="tagline">Connecting Intelligence. Empowering Infrastructure.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section products-strip">
+      <div class="container">
+        <h2>Our Products</h2>
+        <p class="strip-sub">A connected stack of industrial software — from sensor networks to applied AI. Every product runs on the same engine: PrimeModel.ai.</p>
+        <div class="prod-cards">
+          <a class="prod-card micc reveal" data-delay="0" href="/products.html#hub-micc" style="color:inherit;text-decoration:none">
+            <div class="prod-cat">IoT Platform</div>
+            <h3>MICC</h3>
+            <p>The Meshteq Integrated Command Center — real-time monitoring and AI-driven insight for industrial assets, on one dashboard.</p>
+            <span class="prod-more">Explore MICC →</span>
+          </a>
+          <a class="prod-card tune reveal" data-delay="120" href="/products.html#hub-tune" style="color:inherit;text-decoration:none">
+            <div class="prod-cat">Calibration SaaS</div>
+            <h3>PrimeTune.ai</h3>
+            <p>Calibration as a Service — manage devices, calibration records and certificates with AI drift detection built in.</p>
+            <span class="prod-more">Explore PrimeTune →</span>
+          </a>
+          <a class="prod-card model reveal" data-delay="240" href="/products.html#hub-model" style="color:inherit;text-decoration:none">
+            <div class="prod-cat">AI Platform</div>
+            <h3>PrimeModel.ai</h3>
+            <p>The industrial AI engine behind our products — anomaly detection, prediction and language intelligence via API.</p>
+            <span class="prod-more">Explore PrimeModel →</span>
+          </a>
+          <a class="prod-card imyour reveal" data-delay="360" href="/products.html#hub-imyour" style="color:inherit;text-decoration:none">
+            <div class="prod-cat">Applied AI</div>
+            <h3>imyour.ai</h3>
+            <p>AI applications for people and organisations — research, career growth, conversational AI and intelligent hiring.</p>
+            <span class="prod-more">Explore imyour.ai →</span>
+          </a>
         </div>
       </div>
     </section>
@@ -179,6 +213,22 @@
 
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
+  </script>
+
+  <script>
+  /* Scroll reveal — products strip */
+  (function () {
+    var ro = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          var delay = e.target.getAttribute('data-delay') || 0;
+          setTimeout(function () { e.target.classList.add('in'); }, +delay);
+          ro.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(function (el) { ro.observe(el); });
+  })();
   </script>
 
   <!-- ============================================================
