@@ -850,6 +850,8 @@ a:hover{
 /* ── 8. MICC showcase (full-width flagship block) ── */
 
 .family-full{
+  display:block;
+  width:100%;
   padding:48px 0;
   border-bottom:1px solid var(--border);
 }
@@ -859,12 +861,18 @@ a:hover{
   margin-bottom:26px;
 }
 
+/* shot-frame: isolation:isolate prevents reveal's transform from
+   breaking overflow:hidden clipping in Chromium/WebKit */
 .shot-frame{
+  position:relative;
+  isolation:isolate;
   border:1px solid var(--border);
   border-radius:14px;
   overflow:hidden;
   box-shadow:0 18px 44px rgba(2,6,23,.18);
   background:#020617;
+  /* belt-and-suspenders clip for Safari */
+  -webkit-mask-image:-webkit-radial-gradient(white,black);
 }
 
 .shot-frame .shot-bar{
@@ -887,6 +895,7 @@ a:hover{
   display:block;
   width:100%;
   height:auto;
+  border-radius:0;   /* image itself must NOT have its own radius */
 }
 
 .sub-strip{
@@ -894,6 +903,12 @@ a:hover{
   grid-template-columns:repeat(4,minmax(0,1fr));
   gap:14px;
   margin-top:22px;
+  width:100%;        /* explicit width so grid resolves correctly */
+}
+
+/* sub-strip items must not overflow their grid cell */
+.sub-strip .sub-item{
+  min-width:0;
 }
 
 @media(max-width:900px){
