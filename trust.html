@@ -2,14 +2,28 @@
 <html lang="en">
 
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Meshteq Trust Center</title>
-
-<link rel="icon" href="/Icon_Black_Clear%202.png" type="image/png" />
-<link rel="stylesheet" href="styles.css">
-
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trust Center | Meshteq</title>
+  <meta name="description" content="Meshteq's security, privacy and operational integrity practices — covering platform security, infrastructure providers and security policies." />
+  <link rel="canonical" href="https://meshteq.com/trust.html" />
+  <link rel="icon" href="/Icon_Black_Clear%202.png" type="image/png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#0f172a" />
+  <!-- Open Graph -->
+  <meta property="og:title" content="Trust Center | Meshteq" />
+  <meta property="og:description" content="Meshteq's security, privacy and operational integrity practices — covering platform security, infrastructure providers and security policies." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://meshteq.com/trust.html" />
+  <meta property="og:image" content="https://meshteq.com/og-image.png" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Trust Center | Meshteq" />
+  <meta name="twitter:description" content="Meshteq's security, privacy and operational integrity practices." />
+  <meta name="twitter:image" content="https://meshteq.com/og-image.png" />
+  <link rel="preload" href="/styles.css" as="style" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 
 <body>
@@ -128,7 +142,7 @@ INFRASTRUCTURE
 <li><strong>Cloudflare</strong> — DNS and network security</li>
 <li><strong>Netmore</strong> — LoRaWAN network services</li>
 <li><strong>GitHub</strong> — source code management</li>
-<li><strong>Mailgun</strong> — transactional email services</li>
+<li><strong>Discord</strong> — internal team notifications and chat lead alerts</li>
 <li><strong>Stripe</strong> — payment processing</li>
 <li><strong>OpenAI</strong> — AI service integration</li>
 
@@ -219,20 +233,18 @@ FOOTER
 ========================= -->
 
 <footer class="site-footer">
-
-<div class="container">
-
-<p>© Meshteq Sdn Bhd</p>
-
-<p>
-<a href="trust.html">Trust Center</a> |
-<a href="governance/meshteq-data-ownership-privacy-policy.md">Privacy Policy</a>
-</p>
-
-</div>
-
+  <div class="container">
+    <p>© <span id="y"></span> Meshteq Sdn Bhd. All rights reserved.</p>
+    <p>
+      <a href="/trust.html">Trust Center</a> |
+      <a href="/governance/meshteq-data-ownership-privacy-policy.md">Privacy Policy</a>
+    </p>
+  </div>
 </footer>
 
+<script>
+  document.getElementById('y').textContent = new Date().getFullYear();
+</script>
 
 </body>
 </html>

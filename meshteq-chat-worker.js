@@ -43,10 +43,10 @@ function buildSystemPrompt(lead) {
 Malaysian technology company specialising in Industrial IoT and AI SaaS. We connect physical assets to intelligent cloud systems — real-time monitoring, predictive maintenance, data-driven decisions.
 
 ## Products & Services
-- **meshteq.ai** — IoT Connectivity Platform: device provisioning, LoRaWAN deployment, sensor data pipelines.
-- **PrimeTune.ai** — Equipment Performance Monitoring SaaS: real-time dashboards, AI anomaly detection. Oil & gas, manufacturing, utilities, plantation.
-- **PrimeModel.ai** — Industrial AI model training and inference: predictive maintenance, process optimisation.
-- **IoT Engineering Services** — Firmware (LoRaWAN, BLE, GSM), protocol bridging (Modbus/4-20mA to MQTT), field integration.
+- **meshteq.ai** — AI-powered IoT platform product line: multi-tenant device management, LoRaWAN deployment, real-time sensor dashboards, anomaly detection and predictive analytics across energy, utilities, smart cities and industrial operations.
+- **PrimeModel.ai** — The AI engine powering meshteq.ai. Industrial AI platform for model training and inference: predictive maintenance, anomaly detection, process optimisation. The intelligence layer behind all Meshteq IoT products.
+- **PrimeTune.ai** — Calibration as a Service (CaaS): equipment calibration management, AI drift detection, automated calibration certificates and compliance reports. Oil & gas, manufacturing, utilities.
+- **IoT Engineering Services** — Firmware (LoRaWAN, BLE, GSM), protocol bridging (Modbus/4-20mA to MQTT), field integration and commissioning.
 - **ESG & GHG Monitoring** — IoT environmental monitoring for ESG reporting and regulatory compliance.
 
 ## Guidelines
