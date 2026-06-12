@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOCKUP — meshteq.com Products IA</title>
+<style>
+/* == Replicated meshteq.com design tokens (styles.css) == */
+:root{
+  --bg:#0f172a;
+  --bg-dark:#020617;
+  --bg-light:#f8fafc;
+  --text:#0f172a;
+  --muted:#64748b;
+  --brand:#2563eb;
+  --brand-2:#22c55e;
+  --card:#ffffff;
+  --border:#e5e7eb;
+
+  /* product accents (locked brand colours) */
+  --acc-micc:#4a94f0;
+  --acc-tune:#0A8499;
+  --acc-model:#2563eb;
+  --acc-imyour:#7F77DD;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;color:var(--text);line-height:1.6;background:#ffffff}
+h1,h2,h3,h4{margin-top:0;line-height:1.3}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+.container{max-width:1120px;margin:0 auto;padding:0 20px}
+.section{padding:64px 0}
+.section.alt{background:var(--bg-light)}
+.card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05)}
+
+/* ── Mockup chrome (not part of build) ── */
+.mock-label{background:#fef3c7;border:1px dashed #d97706;color:#92400e;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:10px 20px;margin:40px 0 0}
+.mock-note{background:#fffbeb;border:1px dashed #fbbf24;color:#92400e;font-size:13px;padding:8px 20px}
+.mock-faded{opacity:.35;pointer-events:none;border-bottom:1px solid var(--border)}
+
+/* ── Hero (existing, shown for context) ── */
+.hero{background:linear-gradient(180deg,#0f172a 0%,#020617 100%);color:#fff;padding:80px 0}
+.hero h1{font-size:42px}
+.hero .lead{max-width:820px;color:#cbd5e1}
+.btn{display:inline-block;padding:10px 18px;border-radius:10px;font-weight:600;font-size:15px}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.ghost{border:1px solid #475569;color:#e2e8f0}
+.cta-row{display:flex;gap:12px;margin-top:22px}
+
+/* ════════════════════════════════════════
+   NEW — A. Homepage "Our Products" strip
+   ════════════════════════════════════════ */
+.products-strip h2{font-size:30px}
+.products-strip .strip-sub{color:var(--muted);max-width:720px;margin-bottom:28px}
+.prod-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+@media(max-width:900px){.prod-cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.prod-cards{grid-template-columns:1fr}}
+.prod-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:22px;border-top:3px solid var(--brand);box-shadow:0 1px 2px rgba(0,0,0,.05);transition:transform .15s ease,box-shadow .15s ease;display:flex;flex-direction:column}
+.prod-card:hover{transform:translateY(-4px);box-shadow:0 10px 24px rgba(0,0,0,.07)}
+.prod-card.micc{border-top-color:var(--acc-micc)}
+.prod-card.tune{border-top-color:var(--acc-tune)}
+.prod-card.model{border-top-color:var(--acc-model)}
+.prod-card.imyour{border-top-color:var(--acc-imyour)}
+.prod-card h3{font-size:18px;margin-bottom:4px}
+.prod-card .prod-cat{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.prod-card p{font-size:14.5px;color:var(--muted);margin:0 0 14px;flex:1}
+.prod-card .prod-more{font-size:14px;font-weight:600}
+
+/* ════════════════════════════════════════
+   NEW — B. products.html hub
+   ════════════════════════════════════════ */
+.page-head{background:linear-gradient(180deg,#0f172a 0%,#020617 100%);color:#fff;padding:56px 0}
+.page-head h1{font-size:36px;margin-bottom:8px}
+.page-head p{color:#cbd5e1;max-width:780px;margin:0}
+
+.family{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;padding:48px 0;border-bottom:1px solid var(--border)}
+.family:last-of-type{border-bottom:none}
+@media(max-width:820px){.family{grid-template-columns:1fr}}
+.fam-cat{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+.family.micc .fam-cat{color:var(--acc-micc)}
+.family.tune .fam-cat{color:var(--acc-tune)}
+.family.model .fam-cat{color:var(--acc-model)}
+.family.imyour .fam-cat{color:var(--acc-imyour)}
+.family h2{font-size:26px;margin-bottom:10px}
+.family .fam-pos{color:var(--muted);margin:0 0 18px}
+.fam-industries{font-size:13.5px;color:var(--muted)}
+.fam-industries strong{color:var(--text)}
+.fam-cta-row{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap}
+.fam-cta-row .btn.primary{background:var(--brand);color:#fff}
+.fam-cta-row .btn.outline{border:1px solid var(--border);color:var(--text)}
+
+.sub-list{display:grid;gap:12px;align-content:start}
+.sub-item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.section.alt .sub-item{background:#fff}
+.sub-item h4{font-size:15px;margin:0 0 2px}
+.sub-item p{font-size:13.5px;color:var(--muted);margin:0}
+
+/* In Development strip */
+.dev-strip{padding:48px 0}
+.dev-strip h2{font-size:22px;margin-bottom:4px}
+.dev-strip .dev-sub{color:var(--muted);font-size:14.5px;margin-bottom:22px}
+.dev-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+@media(max-width:640px){.dev-cards{grid-template-columns:1fr}}
+.dev-card{background:var(--bg-light);border:1px dashed #cbd5e1;border-radius:14px;padding:20px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.dev-card h3{font-size:17px;margin:0 0 4px}
+.dev-card p{font-size:14px;color:var(--muted);margin:0}
+.dev-badge{flex-shrink:0;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:999px;padding:4px 12px;white-space:nowrap}
+
+/* ── Capability ticker (pattern from trust.html infraScroll) ── */
+.cap-ticker-wrap{position:relative;width:100%;overflow:hidden;margin-top:28px}
+.cap-ticker-wrap::before,.cap-ticker-wrap::after{content:'';position:absolute;top:0;bottom:0;width:120px;z-index:2;pointer-events:none}
+.cap-ticker-wrap::before{left:0;background:linear-gradient(to right,#020617 0%,transparent 100%)}
+.cap-ticker-wrap::after{right:0;background:linear-gradient(to left,#020617 0%,transparent 100%)}
+.cap-ticker{display:flex;gap:14px;width:max-content;animation:capScroll 36s linear infinite}
+.cap-ticker:hover{animation-play-state:paused}
+@keyframes capScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.cap-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid #1e293b;border-radius:12px;padding:10px 18px;white-space:nowrap;flex-shrink:0;transition:border-color .2s,background .2s;cursor:default}
+.cap-item:hover{border-color:#4a94f0;background:rgba(74,148,240,.08)}
+.cap-item span{font-weight:600;font-size:.88rem;color:#e2e8f0}
+.cap-item .cap-fam{font-size:.72rem;color:#64748b;border-left:1px solid #1e293b;padding-left:10px;margin-left:2px}
+.cap-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── Scroll reveal ── */
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* ── Reduced motion (improvement over trust.html) ── */
+@media(prefers-reduced-motion:reduce){
+  .cap-ticker{animation:none;flex-wrap:wrap;width:auto}
+  .reveal{opacity:1;transform:none;transition:none}
+  .prod-card,.prod-card:hover{transform:none;transition:none}
+}
+
+/* Stack callout */
+.stack-note{background:#eef2ff;border:1px solid #c7d2fe;border-radius:14px;padding:22px;margin-top:8px}
+.stack-note p{margin:0;color:#3730a3;font-size:14.5px}
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     MOCKUP A — index.html : "Our Products" insert
+     ╚══════════════════════════════════════════════════════╝ -->
+<div class="mock-label">Mockup A — index.html · new "Our Products" section (inserted between Hero and "What We Do")</div>
+<div class="mock-note">Nav gains one item: About · <strong>Products</strong> · Solutions · NaaS Packages · Why Us · Partners · Trust · Contact</div>
+
+<section class="hero mock-faded">
+  <div class="container">
+    <h1>Building the Future of Connected Intelligence</h1>
+    <p class="lead">(existing hero — unchanged)</p>
+  </div>
+</section>
+
+<section class="section products-strip">
+  <div class="container">
+    <h2>Our Products</h2>
+    <p class="strip-sub">A connected stack of industrial software — from sensor networks to applied AI. Every product runs on the same engine: PrimeModel.ai.</p>
+    <div class="prod-cards">
+      <a class="prod-card micc reveal" data-delay="0" href="#hub-micc" style="color:inherit;text-decoration:none">
+        <div class="prod-cat">IoT Platform</div>
+        <h3>MICC</h3>
+        <p>The Meshteq Integrated Command Center — real-time monitoring and AI-driven insight for industrial assets, on one dashboard.</p>
+        <span class="prod-more">Explore MICC →</span>
+      </a>
+      <a class="prod-card tune reveal" data-delay="120" href="#hub-tune" style="color:inherit;text-decoration:none">
+        <div class="prod-cat">Calibration SaaS</div>
+        <h3>PrimeTune.ai</h3>
+        <p>Calibration as a Service — manage devices, calibration records and certificates with AI drift detection built in.</p>
+        <span class="prod-more">Explore PrimeTune →</span>
+      </a>
+      <a class="prod-card model reveal" data-delay="240" href="#hub-model" style="color:inherit;text-decoration:none">
+        <div class="prod-cat">AI Platform</div>
+        <h3>PrimeModel.ai</h3>
+        <p>The industrial AI engine behind our products — anomaly detection, prediction and language intelligence via API.</p>
+        <span class="prod-more">Explore PrimeModel →</span>
+      </a>
+      <a class="prod-card imyour reveal" data-delay="360" href="#hub-imyour" style="color:inherit;text-decoration:none">
+        <div class="prod-cat">Applied AI</div>
+        <h3>imyour.ai</h3>
+        <p>AI applications for people and organisations — research, career growth, conversational AI and intelligent hiring.</p>
+        <span class="prod-more">Explore imyour.ai →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section alt mock-faded">
+  <div class="container"><h2>What We Do</h2><p style="color:var(--muted)">(existing services section — unchanged, follows directly below)</p></div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     MOCKUP B — products.html : full hub page
+     ╚══════════════════════════════════════════════════════╝ -->
+<div class="mock-label">Mockup B — products.html · new hub page (header &amp; footer identical to existing pages)</div>
+
+<section class="page-head">
+  <div class="container">
+    <h1>Products</h1>
+    <p>Four product families, one connected stack. We build the network, the platforms and the intelligence — so your operations run on data, not guesswork.</p>
+  </div>
+  <div class="cap-ticker-wrap">
+    <div class="cap-ticker" id="capTicker">
+      <div class="cap-item"><span class="cap-dot" style="background:#4a94f0"></span><span>Smart Water / DMA</span><span class="cap-fam">MICC</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#4a94f0"></span><span>ESG &amp; GHG Monitoring</span><span class="cap-fam">MICC</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#4a94f0"></span><span>Gas Leak Detection</span><span class="cap-fam">MICC</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#4a94f0"></span><span>Smart City</span><span class="cap-fam">MICC</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#2CC4D6"></span><span>Calibration as a Service</span><span class="cap-fam">PrimeTune</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#2CC4D6"></span><span>Drift Detection</span><span class="cap-fam">PrimeTune</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#2563eb"></span><span>Numerical AI</span><span class="cap-fam">PrimeModel</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#2563eb"></span><span>Language AI</span><span class="cap-fam">PrimeModel</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#7F77DD"></span><span>ARIS RA Agent</span><span class="cap-fam">imyour.ai</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#7F77DD"></span><span>Mentor Agent</span><span class="cap-fam">imyour.ai</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#7F77DD"></span><span>Aiden AI Assistant</span><span class="cap-fam">imyour.ai</span></div>
+      <div class="cap-item"><span class="cap-dot" style="background:#7F77DD"></span><span>AI Powered ATS</span><span class="cap-fam">imyour.ai</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 1 · MICC -->
+<section class="section" id="hub-micc">
+  <div class="container family micc reveal" style="border-bottom:none;padding-bottom:0">
+    <div>
+      <div class="fam-cat">IoT Platform · meshteq.ai</div>
+      <h2>MICC — Meshteq Integrated Command Center</h2>
+      <p class="fam-pos">A multi-tenant IoT command center that turns sensor data into operational decisions. MICC connects LoRaWAN devices in the field to live dashboards, asset hierarchies and AI-scored alerts — one platform, many industry verticals.</p>
+      <p class="fam-industries"><strong>Industries:</strong> Utilities · Oil &amp; Gas · Campus &amp; Smart City · Agriculture · ESG Compliance</p>
+      <div class="fam-cta-row">
+        <a class="btn primary" href="#contact">Request a Demo</a>
+      </div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item"><h4>Smart Water / DMA Monitoring</h4><p>District metering, leak detection and consumption analytics for water utilities and campuses.</p></div>
+      <div class="sub-item"><h4>ESG &amp; GHG Monitoring</h4><p>Continuous environmental monitoring for ESG reporting and regulatory compliance.</p></div>
+      <div class="sub-item"><h4>Gas Leak Detection</h4><p>Real-time methane and gas sensing with AI anomaly scoring and instant alerts.</p></div>
+      <div class="sub-item"><h4>Smart City Operations</h4><p>Multi-asset, multi-site monitoring on a single command view.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · PrimeTune -->
+<section class="section alt" id="hub-tune">
+  <div class="container family tune reveal" style="border-bottom:none;padding-bottom:0">
+    <div>
+      <div class="fam-cat">Calibration SaaS · primetune.ai</div>
+      <h2>PrimeTune.ai</h2>
+      <p class="fam-pos">Calibration as a Service. PrimeTune manages your instrument fleet end to end — calibration schedules, records and certificates — with AI watching for drift and out-of-tolerance conditions before they become audit findings.</p>
+      <p class="fam-industries"><strong>Industries:</strong> Oil &amp; Gas · Manufacturing · Utilities · Laboratories</p>
+      <div class="fam-cta-row">
+        <a class="btn primary" href="#contact">Request a Demo</a>
+      </div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item"><h4>Device &amp; Fleet Management</h4><p>Every instrument, its status and its history — in one register.</p></div>
+      <div class="sub-item"><h4>Calibration Records &amp; Certificates</h4><p>Digital records and automated certificate generation, audit-ready.</p></div>
+      <div class="sub-item"><h4>Drift &amp; Anomaly Detection</h4><p>AI flags calibration drift and out-of-tolerance trends early.</p></div>
+      <div class="sub-item"><h4>Schedules &amp; Compliance</h4><p>Never miss a due date — overdue tracking and compliance reporting built in.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 · PrimeModel -->
+<section class="section" id="hub-model">
+  <div class="container family model reveal" style="border-bottom:none;padding-bottom:0">
+    <div>
+      <div class="fam-cat">AI Platform · primemodel.ai</div>
+      <h2>PrimeModel.ai</h2>
+      <p class="fam-pos">The AI engine behind the Meshteq stack. PrimeModel serves industrial machine intelligence — anomaly detection, prediction and language AI — to our own products and, via API, to yours.</p>
+      <p class="fam-industries"><strong>For:</strong> Meshteq products · Enterprise integrations · Third-party developers</p>
+      <div class="fam-cta-row">
+        <a class="btn primary" href="#contact">Talk to Us</a>
+      </div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item"><h4>Numerical AI Engine</h4><p>Anomaly detection, predictive maintenance and calibration drift models for sensor data.</p></div>
+      <div class="sub-item"><h4>Language AI Engine</h4><p>Automated reports, compliance documents and AI orchestration.</p></div>
+      <div class="sub-item"><h4>Developer API</h4><p>Call the same engines that power MICC and PrimeTune from your own systems.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 · imyour.ai -->
+<section class="section alt" id="hub-imyour">
+  <div class="container family imyour reveal" style="border-bottom:none;padding-bottom:0">
+    <div>
+      <div class="fam-cat">Applied AI · imyour.ai</div>
+      <h2>imyour.ai</h2>
+      <p class="fam-pos">AI applications for people and organisations — built privacy-first. From academic research to career growth, conversational AI and intelligent recruitment, imyour.ai puts working AI agents exactly where they're needed.</p>
+      <p class="fam-industries"><strong>For:</strong> Researchers &amp; Universities · Professionals · HR &amp; Recruitment Teams</p>
+      <div class="fam-cta-row">
+        <a class="btn primary" href="#contact">Request a Demo</a>
+        <!-- Phase 2: swap to → <a class="btn outline" href="https://imyour.ai">Visit imyour.ai</a> -->
+      </div>
+    </div>
+    <div class="sub-list">
+      <div class="sub-item"><h4>ARIS RA Agent</h4><p>AI research assistant — your PDF library stays on your machine, always.</p></div>
+      <div class="sub-item"><h4>Mentor Agent</h4><p>Competency gap analysis and personalised career coaching.</p></div>
+      <div class="sub-item"><h4>Aiden</h4><p>Deployable AI assistant for guidance, support and lead capture — live on this site.</p></div>
+      <div class="sub-item"><h4>AI Powered ATS Dashboard</h4><p>From bulk resume upload to ranked shortlist, AI pre-screening and approval workflow.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · In Development -->
+<section class="dev-strip">
+  <div class="container">
+    <h2>In Development</h2>
+    <p class="dev-sub">Next in the pipeline — currently in build and internal deployment.</p>
+    <div class="dev-cards reveal">
+      <div class="dev-card">
+        <div><h3>iRis by Meshteq</h3><p>HR &amp; workforce operations platform — claims, attendance and people workflows.</p></div>
+        <span class="dev-badge">In Development</span>
+      </div>
+      <div class="dev-card">
+        <div><h3>PrimeCRM</h3><p>Sales pipeline &amp; customer operations platform for multi-unit businesses.</p></div>
+        <span class="dev-badge">In Development</span>
+      </div>
+    </div>
+    <div class="stack-note" style="margin-top:28px">
+      <p><strong>One stack, one engine.</strong> Every Meshteq product is built on the same foundation — LoRaWAN connectivity, secure multi-tenant cloud, and PrimeModel.ai intelligence.</p>
+    </div>
+  </div>
+</section>
+
+<div class="mock-label" style="margin-bottom:40px">End of mockup — footer &amp; Aiden widget identical to existing pages</div>
+
+
+<script>
+// Ticker: duplicate content for seamless loop (same approach as trust.html)
+(function(){
+  var t=document.getElementById('capTicker');
+  if(t && !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    t.innerHTML += t.innerHTML;
+  }
+})();
+// Scroll reveal
+var ro=new IntersectionObserver(function(es){es.forEach(function(e){
+  if(e.isIntersecting){
+    var d=e.target.getAttribute('data-delay')||0;
+    setTimeout(function(){e.target.classList.add('in');},d);
+    ro.unobserve(e.target);
+  }});},{threshold:0.08,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(function(el){ro.observe(el);});
+</script>
+</body>
+</html>
